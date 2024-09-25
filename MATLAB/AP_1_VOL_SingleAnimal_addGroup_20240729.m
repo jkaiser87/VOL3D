@@ -1,14 +1,28 @@
-%% Volume tracing from Fiji to CCFv3 using AP_histology
+%% Volume Tracing from FIJI to CCFv3 Using AP_histology
 % Julia Kaiser, April 2024
 
-% this script processes injection volumes traced in
-% FIJI and plots them into CCFv3 3D space using AP_histology written by petersaj
+% This script processes injection volumes traced in FIJI and projects them into the Allen Brain Atlas (CCFv3) using AP_histology (https://github.com/petersaj/AP_histology).
+% It supports single-animal volume tracing, alignment with CCF coordinates, and plots the results in 3D. Additionally, it calculates overlaps with selected Allen Brain Atlas (ABA) structures.
 
-% https://github.com/petersaj/AP_histology
+% Features:
+% - Extracts and processes volume data from FIJI tracings.
+% - Converts coordinates to CCF space for alignment with the Allen Brain Atlas.
+% - Visualizes 3D brain volumes and selected brain structures.
+% - Supports optional overlap calculation between volumes and ABA structures.
 
-% ----- add D:\MATLAB to your path
-% ----- make sure that there is only 1 animal in folder
-% should contain subfolder VOL/ and *.tif slices in main folder (open)
+% Main Parameters:
+% - channelsToProcess: Channels to include in the analysis.
+% - channelColors: Colors used to plot channels in the 3D model.
+% - rerun_histology: Set to 1 to rerun AP_histology alignment if needed.
+% - structure_names: Optional list of ABA structures to plot in 3D.
+% - overlap_vol: Set to 1 to calculate volume overlaps with ABA structures.
+
+% Output:
+% - 3D plots of traced volumes and ABA structures.
+% - CSV files with CCF coordinates and overlap percentages.
+
+% To run: Adapt the input parameters for your experiment and execute the script.
+
 
 clearvars; clc;
 % adapt these settings:
@@ -19,8 +33,8 @@ ChannelNames = {'S1'}; %Add Names to the channels (eg Cre, TdT, ...) to label in
 %This allows you to additionally copy the *.mat file into an additional folder.
 %This can help with the follow-up steps of combining several animals into 1
 %figure.
-% Keep empty if you want to skip!
-%addfolder="Z:\Research\Sahni Lab\_Julia\_DOCS\_PAPERS\2024_CBNskill\data\Fig7\VOL3D\M1S1";
+% comment if you want to skip
+%addfolder="Z:\Research\Sahni Lab\_Julia\...\VOL3D\EXP\";
 
 %% only change here if you need to, probs not
 
