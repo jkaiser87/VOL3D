@@ -4,6 +4,8 @@ Toolbox to track volumes (such as injection volume or stroke volume etc...) and 
 This pipeline is fully based on the amazing AP_histology (https://github.com/petersaj/AP_histology) for alignment of sections to brain regions and calculation of coordinates into CCFv3 space. 
 It provides an easy-to-follow workflow for processing single-slice TIF files of coronal brain sections and integrating the data into a 3D model for analysis.
 
+![image](https://github.com/user-attachments/assets/5fa86b22-43e4-4fb3-bc98-8fa4d4731fc2)
+
 <h2>Requirements and Setup</h2>
 
 <h3>Data Format</h3>
