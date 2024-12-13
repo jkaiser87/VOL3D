@@ -98,11 +98,17 @@ overlap_vol = 0; % Set to 1 if you want to calculate the brain volume for this b
 ```
 
 
-- **Final Step:** Once all parameter are set, press "Run" or run the script section by section.
-  - Running for the first time, AP_histology will be opened throughout the process. Go through the steps to define the levels of your slices within the allen brain atlas as explained in the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>. When done (once manual alignment has been completed), close the window, click into the terminal of matlab and press any key. This will prompt the script to continue.
+- **Run Script:** Once all parameter are set, press "Run" or run the script section by section (`Run and advance`).
+  - Running for the first time, AP_histology will be opened throughout the process. Go through the steps to define the levels of your slices within the allen brain atlas as explained in the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>. Briefly:
+    - Set input as tif folder that is open, and output as subfolder "OUT"
+    - Image preprocessing: **ONLY RUN CREATE SLICE**. Do **NOT** resize or rotate any of the images. Otherwise the coordinates drawn in FIJI will not match the images anymore!
+    - Atlas alignment: Run through all 3 steps (`Choose histology atlas slices`, `Auto-align histology/atlas slices`, `Manual align histology/atlas slices`).
+      - `Choose histology atlas slices`: Scroll through the atlas to find the best match to your section on the left. Press `Enter` to assign it, and use arrows (left/right) to flip to next section.
+      - `Auto-align histology/atlas slices`: Runs automatically, no need to do anything
+      - `Manual align histology/atlas slices`: Go through each slice to check the alignment of the atlas outlines - if you want to re-assign the outlines, click the same landmarks on the left (your section) and right (atlas slice) to transform [needs minimun 3 landmarks before adjusting]. ***Make sure to keep the order the same!***. Click S to save and use arrow to continue to next image.
+    - When done (once manual alignment has been completed), close the window, click into the Command Window of matlab and press any key. This will prompt the script to continue.
 
 - **Output:** This will generate a 3D plot and create CSV files for further analysis.
-
 
 <h4>2.2. Processing Multiple Animals</h4>
 <p>To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `AP_2_VOL_PlotAllAnimalsInFolder_20240502.m`.
