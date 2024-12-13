@@ -119,21 +119,17 @@ To combine data from multiple animals into a single 3D model, follow these steps
 - Adapt the following settings at the beginning of the script:
 
 ```
-ExperimentName = 'KCN'; %set a prefix for the files saved in the script
-colorMapType = 'channel';  % Set to 'channel' to (re)color by channel, or 'group' if you want to add groupnames that are unique in filename
+ExperimentName = 'EXP'; %set a prefix for the files saved in the script
+colorMapType = 'channel';  % Set to 'channel' to (re)color by channel (set in Script 1), or 'group' if you want to add groupnames from filename
 colorMap = containers.Map(... % Define the colors and which group they correspond to (by order)
     {'flexTdT', 'GFP'}, ...  % Group or channel names
     {'#DB2B39', '#337054',});  % Corresponding colors (465487=blue, DB2B39=red, 7C8289=gray, 337054=green)
-flipside = 'L'; %can be L or R or empty for no flipping
-alpha = 0.1; %transparency for volumes in brain
-resolution = 100; % voxelsize for volume estimation (um). 10 for high resolution, 100 for fast runs (Atlas original is 10)
-structure_acronyms = {'MOs','MOp','SSp','SSs', 'AUD','VIS','AI','ACA'}; %need to match ABA nomenclature
+flipside = 'L'; %if L/R: volumes will all be flipped onto L/R hemisphere 
+alpha = 0.1; %transparency for volumes in brain plots
 ```
 
-
 - Run the script (recommended to go by section as you may not need all steps):
-  - 
-
+  - **folder setup, Create volumes data**: This always needs to be run to load the volumes into a suitable format for the following steps. Will load a previously created file if run the second time to save speed. If you want to re-run, set forceRun = true; 
 
 - **Output:** The script will generate the following:
   - A 3D plot of volumes, either by group, by animal, or combined into one plot.
