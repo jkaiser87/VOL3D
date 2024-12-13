@@ -74,8 +74,9 @@ It provides an easy-to-follow workflow for processing single-slice TIF files of 
 <b>1.2. Volume Tracing (VOL3D)</b>
 <ul>
     <li>Navigate to the toolbox (<code>>></code> <code>2_VOL3D_VolCoords</code>).</li>
-    <li>Set the folder to a folder containing sections (multichannel) of 1 or more animals (this can be the folder "Slices" created in the previous step or directly a folder containing TIF files. Make sure that no other tif files are in this or a subfolder).</li>
-    <li>Preprocess slices: Rotate and flip slices as necessary
+    <li>![image](https://github.com/user-attachments/assets/7f85864d-4866-470c-bfa6-9bd9f3986a01) Set the folder to a folder containing sections (multichannel) of 1 or more animals (this can be the folder "Slices" created in the previous step or directly a folder containing TIF files. Make sure that no other tif files are in this or a subfolder).</li>
+    <li>![image](https://github.com/user-attachments/assets/2d716049-19c7-4aeb-a8cf-f3071fd66221)
+Preprocess slices: Rotate and flip slices as necessary
             - Rotate the slices by drawing a line at the midline (from top to bottom)
             - Injection volumes should be on the same side, so if necessary, flip the section using Ctrl + F.</li>
     <li>Draw Volume: FIJI will automatically isolate the channel.</li>
