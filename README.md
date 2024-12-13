@@ -108,18 +108,17 @@ overlap_vol = 0; % Set to 1 if you want to calculate the brain volume for this b
       - `Manual align histology/atlas slices`: Go through each slice to check the alignment of the atlas outlines - if you want to re-assign the outlines, click the same landmarks on the left (your section) and right (atlas slice) to transform [needs minimun 3 landmarks before adjusting]. ***Make sure to keep the order the same!***. Click S to save and use arrow to continue to next image.
     - When done (once manual alignment has been completed), close the window, click into the Command Window of matlab and press any key. This will prompt the script to continue.
 
-- **Output:** This will generate a 3D plot and create CSV files for further analysis.
+- **Output:** This scipt will generate a 3D plot of the volume(s) within the CCFv3 file and create the following additional files for further analysis
+  - `OUT/*_variables.mat`: This file contains the coordinates and can be used to plot several animals into one plot using Script 2
+  - `OUT/FIG/*_3DPlot_Volume.png/.m': This folder contains the 3D Plot (as png and matlab figure file) of the 3d volume(s)
 
-<h4>2.2. Processing Multiple Animals</h4>
-<p>To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `AP_2_VOL_PlotAllAnimalsInFolder_20240502.m`.
+#### 2. Plotting Multiple Animals into 1 
+To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `AP_2_VOL_PlotAllAnimalsInFolder_20240502.m`.
+- Optional: Copy/paste `OUT/*_variables.mat` files of all animals to be combined into one subfolder (this may not be necessary if you defined `addfolder` in the previous step).
+- Open the folder where `*_variables.mat` files are stored (set as Current folder).
+- Adapt the following settings at the beginning of the script:
 
-
-    **Step 1:**Navigate to the folder where the `addfolder` from the previous script was saved. Alternatively, copy and paste any `*_variables.mat` file from each animal you want to include into a new folder, and navigate to that folder.
-
-
-<p>**Step 2:**Adapt the following settings at the beginning of the script:
-
-`
+```
 ExperimentName = 'EXPABC';    % Name of the experiment
 groups = {'Cre', 'Ctrl'};     % Group names based on filenames (ensure unique names for each group)
 groupColors = {[0.9882, 0.6706, 0.3922], [244/255, 91/255, 105/255], 'blue'};  % Colors for plotting (RGB triplet or standard color names)
@@ -127,15 +126,15 @@ flipside = 'L';               % Can be 'L' or 'R' to flip, or leave empty for no
 alpha = 0.1;                  % Transparency for the 3D plot
 resolution = 100;             % Voxel size (e.g., use 10 for high resolution, 100 for faster runs)
 structure_acronyms = {'MO', 'MOs', 'MOp', 'SS', 'SSp', 'SSs', 'AUD', 'VIS', 'AI', 'ACA'};  % List of ABA structures to plot
-`
+```
 
 
-    **Step 3:**Run the script.
+- Run the script (recommended to go by section as you may not need all steps):
+  - 
 
 
-<p>**Output:**The script will generate the following:
-
-    A 3D plot of volumes, either by group, by animal, or combined into one plot.
-    A CSV file with the percentage overlap between all volumes (all volumes compared to each other).
-    A CSV file with the percentage overlap between the volumes and the selected ABA structures.
+- **Output:** The script will generate the following:
+  - A 3D plot of volumes, either by group, by animal, or combined into one plot.
+  - A CSV file with the percentage overlap between all volumes (all volumes compared to each other).
+  - A CSV file with the percentage overlap between the volumes and the selected ABA structures.
 
