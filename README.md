@@ -74,7 +74,7 @@ Preprocess slices: Rotate and flip slices as necessary
 #### 1. Animal-specific transformation
 - Open MATLAB
 - Navigate to the folder of 1 animal. This is the folder containing the TIF files, and should also contain a subfolder called "VOL" that was created through the FIJI pipeline
-- Open the code file: `AP_1_VOL_SingleAnimal_addGroup_20240729.m` from this repository.
+- Open the code file: `VOL3D_Step1_SingleAnimal_addGroup.m` from this repository.
 - Adjust the following settings in the code:
   - **Define channels to process:** Set the channels and colors for your analysis, and give your volume a label (e.g., group or fluorophore). This will be used to color-code your plots later.
     
@@ -113,7 +113,7 @@ overlap_vol = 0; % Set to 1 if you want to calculate the brain volume for this b
   - `OUT/FIG/*_3DPlot_Volume.png/.m': This folder contains the 3D Plot (as png and matlab figure file) of the 3d volume(s)
 
 #### 2. Plotting Multiple Animals into 1 
-To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `AP_2_VOL_PlotAllAnimalsInFolder_20240502.m`.
+To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `VOL3D_Step2_PlotAllAndCalculateVolumes.m`.
 - Optional: Copy/paste `OUT/*_variables.mat` files of all animals to be combined into one subfolder (this may not be necessary if you defined `addfolder` in the previous step).
 - Open the folder where `*_variables.mat` files are stored (set as Current folder).
 - Adapt the following settings at the beginning of the script:
