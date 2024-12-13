@@ -11,7 +11,8 @@ It provides an easy-to-follow workflow for processing single-slice TIF files of 
 <h3>Data Format</h3>
 
 <ul>
-        <li>Folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal.</li>
+        <li>Requirement: Folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal
+                (additional pipeline provided that can help with cropping slide images and merging split-channel images).</li>
         <li><strong>Important: Naming of the Files</strong></li>
         <ul>
             <li>The pipeline <strong>relies heavily on filenames</strong> for correct processing and sorting. The correct syntax for the filenames is as follows:</li>
@@ -19,12 +20,12 @@ It provides an easy-to-follow workflow for processing single-slice TIF files of 
             <li>
                 where:
                 <ul>
-                    <li>The part before the first underscore (e.g., <code>EXP1-A2</code>) is <strong>used to identify the animal</strong>. This can include both the experiment and animal name, separated by a hyphen <code>-</code> if necessary.</li>
+                    <li>The part <strong>before the first underscore</strong>strong> (e.g., <code>EXP1-A2</code>) is used to <strong>identify the animal</strong> (and should be unique). This can include both the experiment and animal name, separated by a hyphen <code>-</code> if necessary.</li>
                     <li><code>_s001</code> is the slice number (slice numbers must be padded to avoid incorrect sorting, e.g., <code>_s001</code>, <code>_s002</code>).</li>
                     <li><strong>Optional:</strong> <code>_Ch01</code> represents the channel (e.g., <code>_Ch01</code>, <code>_DAPI</code>), if using separate-channel images.</li>
                 </ul>
             </li>
-            <li><strong>Ensure that filenames always start with the animal name</strong> (or a combination of experiment and animal name). Anything before the first underscore will be treated as the animal identifier. This is critical for correct organization and grouping of data.</li>
+            <li><strong>Ensure that filenames always start with the animal name</strong> (or a combination of experiment and animal name, unique!). Anything before the first underscore will be treated as the animal identifier. This is critical for correct organization and grouping of data.</li>
         </ul>
         <li><strong>Example filenames:</strong></li>
         <ul>
@@ -42,37 +43,41 @@ It provides an easy-to-follow workflow for processing single-slice TIF files of 
 
 <h3>MATLAB</h3>
   <ul>
-    <li><strong>AP_histology:</strong> Follow the installation instructions on the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>.</li>
-        <li><strong>Credit:</strong> This pipeline relies on AP_histology, developed by Andy Peters and others, which provides tools to align histology images to the Allen Brain Atlas. We recommend following their detailed documentation for setup and use. Special thanks to the AP_histology team for making this invaluable resource available to the community.</li>
-        <li><strong>MATLAB Toolboxes:</strong></li>
+        <li>This pipeline is built on <strong>AP_histology</strong>, developed by Andy Peters, which provides tools to align histology images to the Allen Brain Atlas. We recommend following their detailed documentation for setup and use. Special thanks to the AP_histology team for making this invaluable resource available to the community.</li>
+        <li><strong>AP_histology:</strong> Follow the installation instructions on the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>.</li>
+        <li><strong>MATLAB Toolboxes and Add-ons:</strong></li>
         <ul>
             <li>Install the <strong>Curve Fitting Toolbox</strong>.</li>
             <li>Install the <strong>natsortfile add-on</strong> (Natural-Order Filename Sort Version 3.4.5 by Stephen23).</li>
         </ul>
-        <li>Download the <strong>MATLAB folder</strong> from this toolbox and place it for example in your user folder under <code>Documents/MATLAB/</code> (in addition to the AP-histology required files).</li>
+        <li>Download the <strong>MATLAB folder</strong> from this toolbox and place it in your Windows user folder under <code>Documents/MATLAB/</code> (in addition to the AP-histology required files).</li>
    <li>Make sure the MATLAB folder is added to your path (main menu > add to path > check all files and folders are listed, otherwise MATLAB won't find the scripts)</li>
     </ul>
  
    <h2>Running the Pipeline</h2>
 <h3>1. FIJI Part</h3>
 
-<b>1.1. Pre-processing of images (optional)</b>
+<b>1.1. Pre-processing of images 
+*(Optional, creates folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal)</b>
 <ul>
     <li><b>Open FIJI:</b> Launch FIJI and navigate to the toolbox by selecting <code>>></code> <code>1_PrepareSlicesAsTif</code>.</li>
-    <li><b>Select the appropriate folder:</b> Choose the folder that contains either whole-slide overview TIF files or single-slice separate-channel TIF files. If the correct filename convention is followed, the folder can contain multiple animals' data within the same folder.</li>
+    <li>![folder](https://github.com/user-attachments/assets/7f85864d-4866-470c-bfa6-9bd9f3986a01) <b>Select the appropriate folder:</b> Choose the folder that contains either whole-slide overview TIF files or single-slice separate-channel TIF files. If the correct filename convention is followed, the folder can contain multiple animals' data within the same folder.</li>
+    <li><b>If you are working with whole-slide imaging:</b> </li>
+    <li><b>If you need to make adjustments to the histogram</b>: ![resize](https://github.com/user-attachments/assets/c781c3c7-77ef-432e-8b27-0ca4efac2c04) Split the channels. Then, if needed, make any adjustments to the split channel images (such as reducing background noise) in Photoshop. ![crop](https://github.com/user-attachments/assets/1c4609b5-9eee-4bf0-b8ea-09ae165468b6) Crop the whole-slide images by drawing rectangles around each slice you want to export. At the end, the script will save each slice as a separate file in the subfolder "Slices/ANIMALNAME".</li>
+        <li>![merge](https://github.com/user-attachments/assets/db138804-912a-4c5f-8562-f8fe5b60610c) <b>If you are working with separate-channel images:</b> This script will allow you to provide a folder of split-channel images. You will be prompted to select which channels to include and to specify the color for each channel in the final multichannel TIF file.</li>
+        <li>![merge](https://github.com/user-attachments/assets/db138804-912a-4c5f-8562-f8fe5b60610c) <b>If you are working with multi-channel images and want to exclude images:</b> This script also allows to remove channels from the image that you do not want and re-arrange the colors.</li>
 </ul>
 
-<p><b>If you are working with whole-slide imaging:</b> First, split the channels in FIJI. Then, if needed, make any adjustments to the image (such as reducing background noise) in Photoshop. Finally, crop the whole-slide images by drawing rectangles around each slice you want to export, and save each slice as a separate file.</p>
+<p><b>OUTPUT:</b> The result will be a folder with one multichannel TIF file per section (i.e., per slice). 
+        If multiple animals provided, there will be subfolders in the folder "Slices" according to the animal name.</p>
 
-<p><b>If you are working with separate-channel images:</b> Use the last icon in the toolset to merge the channels. You will be prompted to select which channels to include and to specify the color for each channel in the final multichannel TIF file.</p>
-
-<p><b>OUTPUT:</b> The result will be a folder with one multichannel TIF file per section (i.e., per slice).</p>
-
-<b>1.2. Volume Tracing</b>
+<b>1.2. Volume Tracing (VOL3D)</b>
 <ul>
     <li>Navigate to the toolbox (<code>>></code> <code>2_VOL3D_VolCoords</code>).</li>
-    <li>Set the folder to a folder containing sections (multichannel) of 1 or more animals.</li>
-    <li>Preprocess slices: Rotate and flip slices as necessary.</li>
+    <li>Set the folder to a folder containing sections (multichannel) of 1 or more animals (this can be the folder "Slices" created in the previous step or directly a folder containing TIF files. Make sure that no other tif files are in this or a subfolder).</li>
+    <li>Preprocess slices: Rotate and flip slices as necessary
+            - Rotate the slices by drawing a line at the midline (from top to bottom)
+            - Injection volumes should be on the same side, so if necessary, flip the section using Ctrl + F.</li>
     <li>Draw Volume: FIJI will automatically isolate the channel.</li>
     <ul>
         <li>If no signal is detected, click "Continue" to proceed to the next slice.</li>
