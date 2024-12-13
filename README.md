@@ -81,6 +81,7 @@ Preprocess slices: Rotate and flip slices as necessary
 ```
 channelColors = {'red','green'}; % Set the colors for plotting each channel
 ChannelNames = {'TdTomato','GFP'}; % Give descriptive names for each channel (e.g., Cre/Ctrl, TdT/GFP, Stroke/Injection, etc.)
+GroupName = ''; %Give distinct Group name for grouping with other animals later (eg Ctrl, 10mgDose, ...) or keep empty
 ```
 **Optional:** If you're planning to combine results from multiple animals later, you can choose to copy the final output into an additional (existing!) folder. The script will then save the necessary files into this folder. Make sure this folder already exists:
 
@@ -120,16 +121,34 @@ To combine data from multiple animals into a single 3D model, follow these steps
 
 ```
 ExperimentName = 'EXP'; %set a prefix for the files saved in the script
-colorMapType = 'channel';  % Set to 'channel' to (re)color by channel (set in Script 1), or 'group' if you want to add groupnames from filename
+colorMapType = 'channel';  % Set to 'channel' to (re)color by channel (set in Script 1), or 'group' if you want to add groupnames from filename [unique Groupname needs to be contained within filename to assign Groups to animals]
 colorMap = containers.Map(... % Define the colors and which group they correspond to (by order)
     {'flexTdT', 'GFP'}, ...  % Group or channel names
     {'#DB2B39', '#337054',});  % Corresponding colors (465487=blue, DB2B39=red, 7C8289=gray, 337054=green)
 flipside = 'L'; %if L/R: volumes will all be flipped onto L/R hemisphere 
 alpha = 0.1; %transparency for volumes in brain plots
+resolution = 100; % voxelsize for volume estimation (um). 10 for high resolution, 100 for fast runs (Atlas original is 10)
 ```
 
-- Run the script (recommended to go by section as you may not need all steps):
-  - **folder setup, Create volumes data**: This always needs to be run to load the volumes into a suitable format for the following steps. Will load a previously created file if run the second time to save speed. If you want to re-run, set forceRun = true; 
+- **Run the script by section and adapt as necessary**
+  - **folder setup, Create volumes data**: This always needs to be run to load the volumes into a suitable format for the following steps.
+    - Will load a previously created file if run the second time. If you want to re-run, set forceRun = true or manually delete `OUT/*_3D_VolumeCalc.mat` (useful when you add more animals, or change the color etc in the main files);
+    - **Output**: This script also creates a CSV file with the min & max coordinate in each [x,y,z] direction as well as the estimated volume size by calculating how many voxel are inside the volume (voxel size depend on resolution). Can be found in `OUT/*_MinMax-Axes.csv`
+  - **Plot volumes with brain**: Run this section to create 3D reconstructions within a CCFv3 brain.
+    - `plot_volumes_with_brain(volumes, outDir, ExperimentName, alpha, colorType, plotMode)` function parameters:
+      - *volumes* - structure created in previous step
+      - *outDir, ExperimentName, alpha* - (defined in setup)
+      - *colorType* - can be 'group' or 'channel'. 
+      - *plotMode* - can be 0 (plots all available volumes into 1 brain), 1 (split each group into several brains), 2 (split animals into individual brains)
+    - This can also be done on a subset of the data:
+    ```
+    subvolumes = volumes(ismember({volumes.channel}, {'GFP'}));
+    plot_volumes_with_brain(subvolumes, outDir, [ExperimentName,'-GFP'], alpha, 'group',0); 
+    ```
+    - **Output**: This script saves 
+  - **Calculate overlap between volumes (or subvolumes)**: Run this section, if you want to calculate the estimated overlap between volumes.
+    - This script creates an estimate of volume size (by creating voxel of resolution size) for each volume, as well as 
+
 
 - **Output:** The script will generate the following:
   - A 3D plot of volumes, either by group, by animal, or combined into one plot.
