@@ -31,7 +31,7 @@
 clearvars; clc;
 
 ExperimentName = 'EXP';
-colorMapType = 'group';  % Set to 'channel' to (re)color by channel, or 'group' [as defined in Script 1]
+colorMapType = 'channel';  % Set to 'channel' to (re)color by channel, or 'group' [as defined in Script 1]
 colorMap = containers.Map(... % Define the colors and which group they correspond to (by order)
     {'TdT', 'GFP'}, ...  % Group or channel names
     {'#DB2B39', '#337054',});  % Corresponding colors (465487=blue, DB2B39=red, 7C8289=gray, 337054=green)
@@ -66,7 +66,7 @@ end
 %% Plot volumes with brain
 % run this section to plot all 3D volumes in brains
 
-plot_volumes_with_brain(volumes, outDir, ExperimentName, alpha, 'group', 2); 
+plot_volumes_with_brain(volumes, outDir, ExperimentName, alpha, 'channel', 0); 
 
 %colorType [second last parameter] can be group or channel to choose what to color volumes by
 %plotMode [last parameter]: 0 all volumes in 1 brain, 1 split by group, 2 split all individual animals
