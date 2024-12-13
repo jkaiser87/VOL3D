@@ -68,10 +68,12 @@ Preprocess slices: Rotate and flip slices as necessary
   - Continue through all slices, the pipeline will tell you when all are processed.
 - ![shape](https://github.com/user-attachments/assets/63b517f2-2c0e-4299-ae90-5ed4a129c229) **You can process additional channels**. Re-run this last step and select another channel.
 
+- **Output:** Running this pipeline will create a subfolder called "VOL" in each animal folder (or in the main folder), which contains CSV and ZIP folders of the coordinates tracked through the pipeline.
+
 ### MATLAB - transform coordinates into CCFv3 space
 #### 1. Animal-specific transformation
 - Open MATLAB
-- Navigate to the folder, make sure the folder you select contains only the single TIF files for one brain.
+- Navigate to the folder of 1 animal. This is the folder containing the TIF files, and should also contain a subfolder called "VOL" that was created through the FIJI pipeline
 - Open the code file: `AP_1_VOL_SingleAnimal_addGroup_20240729.m` from this repository.
 - Adjust the following settings in the code:
   - **Define channels to process:** Set the channels and colors for your analysis, and give your volume a label (e.g., group or fluorophore). This will be used to color-code your plots later.
@@ -81,22 +83,25 @@ channelColors = {'red','green'}; % Set the colors for plotting each channel
 ChannelNames = {'TdTomato','GFP'}; % Give descriptive names for each channel (e.g., Cre/Ctrl, TdT/GFP, Stroke/Injection, etc.)
 ```
 **Optional:** If you're planning to combine results from multiple animals later, you can choose to copy the final output into an additional (existing!) folder. The script will then save the necessary files into this folder. Make sure this folder already exists:
+
 `addfolder="C:\......\VOL3D\EXP\";  % You can skip this by adding a % before the line if not needed. Folder needs to already exist, and it needs the full folder address`
 
 - There are some additional options you can customize:
   - **Rerun AP-histology:** By default, AP-histology runs automatically the first time, and once defined will be skipped. Set this to 1 if you want to rerun it (eg if you want to re-define the atlas mapping).
-  - **Calculate brain volume:**By default, brain volume is calculated for all brains in step 2, but you can choose to do it now for this brain by setting this to 1.
-  - **Plot ABA structures:**You can plot specific brain structures by defining their names (these should match ABA nomenclature). If you don’t want to plot structures, just comment out the line by adding a %.
+  - **Calculate brain volume:** By default, brain volume is calculated for all brains in step 2, but you can choose to do it now for this brain by setting this to 1.
+  - **Plot ABA structures:** You can plot specific brain structures by defining their names (these should match ABA nomenclature). If you don’t want to plot structures, just comment out the line by adding a %.
 
-
-`
+```
 rerun_histology = 0;  % Set to 1 if you want to force rerun AP_histology
-overlap_vol = 0;      % Set to 1 if you want to calculate brain volume now
-% Uncomment the line below if you want to skip plotting ABA structures:
-% structure_names = {'Somatomotor areas', 'Somatosensory areas', 'Visual areas', 'Auditory areas'}; % Structures to plot in the brain (light grey)
-`
+overlap_vol = 0; % Set to 1 if you want to calculate the brain volume for this brain (this will be done later for ALL brains anyway in step 2, so only put 1 if you are not planning on running step 2)  
+% structure_names = {'Somatomotor areas', 'Somatosensory areas', 'Visual areas', 'Auditory areas'}; %structures to plot into the brain (light grey)
+```
 
-<p>**Final Step:**Press "Run" or run the script section by section. This will generate a 3D plot and create CSV files for further analysis.
+
+- **Final Step:** Once all parameter are set, press "Run" or run the script section by section.
+  - Running for the first time, AP_histology will be opened throughout the process. Go through the steps to define the levels of your slices within the allen brain atlas as explained in the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>. When done (once manual alignment has been completed), close the window, click into the terminal of matlab and press any key. This will prompt the script to continue.
+
+- **Output:** This will generate a 3D plot and create CSV files for further analysis.
 
 
 <h4>2.2. Processing Multiple Animals</h4>
