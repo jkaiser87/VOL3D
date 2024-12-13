@@ -23,24 +23,21 @@
 
 % To run: Adapt the input parameters for your experiment and execute the script.
 
-
+%% Adapt these parameters before running
 clearvars; clc;
 % adapt these settings:
-channelsToProcess = {'C1'}; % Define which channels to process (should have csv files in subfolder starting with)
-channelColors={'red'}; %colors to plot the channels by
-ChannelNames = {'S1'}; %Add Names to the channels (eg Cre, TdT, ...) to label in plot
+channelColors={'green'}; %colors to plot the channels by, should match number of channels processed
+ChannelNames = {'GFP'}; %Add Names to the channels (eg Cre, TdT, ...) to label in plot
+GroupName = 'TdT'; %Add a distinctive Group name for grouping later (eg Ctrl, 10mgDose, ...) (or keep empty)
 
 %This allows you to additionally copy the *.mat file into an additional folder.
-%This can help with the follow-up steps of combining several animals into 1
-%figure.
-% comment if you want to skip
-%addfolder="Z:\Research\Sahni Lab\_Julia\...\VOL3D\EXP\";
+%This can help with the follow-up steps of combining several animals into 1 figure.
+addfolder="Z:\Research\Sahni Lab\Data\_Team_ABC\_STARQ\NewStarQ\M2 Images\Cortex\VOL3D"; % comment this line by adding % in the front if you want to skip
 
-%% only change here if you need to, probs not
+%% only change here if you need to
 
 rerun_histology = 0;  % Set to 1 if you want to force rerun AP_histology
 overlap_vol = 0; % Set to 1 if you want to calculate the brain volume for this brain (this will be done later for ALL brains anyway in step 2, so only put 1 if you are not planning on running step 2)
-% uncomment this next line (delete the %) if you dont want to plot any ABA structures:
 % structure_names = {'Somatomotor areas', 'Somatosensory areas', 'Visual areas', 'Auditory areas'}; %structures to plot into the brain (light grey)
 
 %%
@@ -90,7 +87,9 @@ histology_file = fullfile(outputFolderPath, 'atlas2histology_tform.mat');
 
 if rerun_histology == 1 || ~isfile(histology_file)
     AP_histology
-    disp('Go through all steps in AP_histology window, then continue by pressing any key inside the terminal. \n To stop, press Ctrl + C');
+    disp(['Go through all steps in AP_histology window (last step: manual alignment),']);
+    disp(['then continue by pressing any key inside the terminal.'])
+    disp(['To stop, press Ctrl + C']);
     pause;
 else
     disp('histology_ccf.mat already exists. Skipping AP_histology.');
@@ -102,6 +101,60 @@ end
 % Get a list of all CSV files in the folder
 folderPath = fullfile(parentFolder,'VOL/CSV'); %filepath to csv files
 
+% check how many channels and make sure its consistent with names and
+% colors
+
+% Get a list of all CSV files in the folder
+csvFiles = dir(fullfile(folderPath, '*.csv'));
+
+% Extract unique channel names from the CSV filenames (assuming the format "channelname_***.csv")
+channelsToProcess = unique(cellfun(@(x) strtok(x, '_'), {csvFiles.name}, 'UniformOutput', false));
+
+% Display the found channels
+disp('Channels found in CSV subfolder:');
+disp(channelsToProcess);
+
+% Ensure channelColors has the same length as channelsToProcess
+if length(channelColors) < length(channelsToProcess)
+    defaultColors = {'red', 'green', 'blue'};
+    % Fill missing colors with default colors, cycling if needed
+    for k = length(channelColors)+1:length(channelsToProcess)
+        channelColors{k} = defaultColors{mod(k-1, length(defaultColors)) + 1};
+    end
+end
+%%
+% Check if channelNames exists and matches the number of channelsToProcess
+if length(ChannelNames) ~= length(channelsToProcess)
+    % Pre-fill the existing channel names (or use empty strings if missing)
+    if length(ChannelNames) < length(channelsToProcess)
+        ChannelNames = [ChannelNames, repmat({''}, 1, length(channelsToProcess) - length(ChannelNames))];
+    elseif length(ChannelNames) > length(channelsToProcess)
+        ChannelNames = ChannelNames(1:length(channelsToProcess));
+    end
+
+    % Create the dialog to prompt for names
+    prompt = strcat('Enter a  group name for channel "', channelsToProcess, '":');
+    dlgTitle = 'Channel Names Input';
+    dims = [1 50];  % Specify dialog dimensions
+
+    % Open dialog with pre-filled values
+    newChannelNames = inputdlg(prompt, dlgTitle, dims, ChannelNames);
+
+    % If the user doesn't cancel (i.e., returns non-empty cell array), update the channel names
+    if ~isempty(newChannelNames)
+        % Check if all entries are non-empty; if they are, accept the new names
+        if all(~cellfun('isempty', newChannelNames))
+            ChannelNames = newChannelNames;
+        else
+            disp('Channel names input canceled or incomplete. Retaining previous names.');
+        end
+    else
+        disp('Channel names input canceled. GroupNames does not match number of channels found. Canceling script.');
+        exit
+    end
+end
+
+%%
 [parentFolderPath, parentFolderName, ~] = fileparts(parentFolder);
 %[~, parentFolderName, ~] = fileparts(parentFolderPath);
 disp(['-------- Processing ',parentFolderName]); %second folder up to Slices
@@ -123,7 +176,7 @@ for i = 1:length(tifFiles)
         if ~isfield(points, channel)
             points.(channel) = struct('name', {}, 'X', {}, 'Y', {});
         end
-        csvPath = fullfile(folderPath, strcat(channel, '_', name, '.csv'));
+        csvPath = fullfile(folderPath, strcat(channel, '_', strrep(baseFileName, 'tif', 'csv')));
 
         points.(channel)(i).name = name;
         points.(channel)(i).X = [];
@@ -269,6 +322,9 @@ for j = 1:length(channelsToProcess)
     inj_vol(j).channels = {channel};
     inj_vol(j).channelColor = channelColors{j};
     inj_vol(j).animalName = parentFolderName;
+    if ~isempty(GroupName)
+        inj_vol(j).GroupName = GroupName;
+    end
     inj_vol(j).smoothedVertices = smoothedVertices;
     inj_vol(j).k1 = k1;
     inj_vol(j).ccf_points_cat_ord = ccf_points_cat_ord;

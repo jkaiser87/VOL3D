@@ -1,7 +1,7 @@
 function overlapResults = calculate_volume_overlap(volumes, outDir, ExperimentName, alpha, plotResults)
 % Initialize overlap results struct
 overlapResults = struct('animal1', {}, 'channel1', {}, 'animal2', {}, 'channel2', {}, 'Comp', {}, ...
-    'volume1', {}, 'volume2', {}, 'overlap_volume', {}, 'fraction_of_vol1', {}, 'fraction_of_vol2', {});
+    'volume', {}, 'overlap_volume', {}, 'overlap_percentage', {});
 
 if plotResults
     figDir_vol = fullfile(outDir, 'FIG-VOL');
@@ -12,8 +12,13 @@ end
 
 % Loop over all pairs of volumes
 for i = 1:length(volumes)
-    for j = i+1:length(volumes)
-        % Get volume information
+    for j = i:length(volumes)
+        % Skip self-comparisons
+        if i == j
+            continue;
+        end
+
+       % Get volume information
         vol1 = volumes(i);
         vol2 = volumes(j);
 
@@ -36,23 +41,26 @@ for i = 1:length(volumes)
             fraction_of_vol2 = (estimated_overlap_volume / vol2.volume) * 100;
         end
 
-        % Ensure Comp is in alphabetical order
-        % Calculate comparison in reverse alphabetical order
-        channels = {vol1.channel, vol2.channel};
-        sortedChannels = sort(channels);
-        comparison = [sortedChannels{1}, '-', sortedChannels{2}];
-
-        % Store the overlap result
+        
+        % Add first comparison: vol1 -> vol2
         overlapResults(end+1) = struct('animal1', vol1.animal, ...
             'channel1', vol1.channel, ...
             'animal2', vol2.animal, ...
             'channel2', vol2.channel, ...
-            'Comp', comparison, ...
-            'volume1', vol1.volume, ...
-            'volume2', vol2.volume, ...
+            'Comp', [vol1.channel, '-', vol2.channel], ...
+            'volume', vol1.volume, ...
             'overlap_volume', estimated_overlap_volume, ...
-            'fraction_of_vol1', fraction_of_vol1, ...
-            'fraction_of_vol2', fraction_of_vol2);
+            'overlap_percentage', fraction_of_vol1);  % Use fraction_of_vol1
+
+% Add second comparison: vol2 -> vol1 (reverse order)
+        overlapResults(end+1) = struct('animal1', vol2.animal, ...
+            'channel1', vol2.channel, ...
+            'animal2', vol1.animal, ...
+            'channel2', vol1.channel, ...
+            'Comp', [vol2.channel, '-', vol1.channel], ...  % Reverse order of comparison
+            'volume', vol2.volume, ...
+            'overlap_volume', estimated_overlap_volume, ...
+            'overlap_percentage', fraction_of_vol2);  % Use fraction_of_vol2
 
         % Plot the overlap dots as a sanity check and save fig
         if plotResults

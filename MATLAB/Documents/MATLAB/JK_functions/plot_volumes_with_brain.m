@@ -149,7 +149,7 @@ function [h, colorStr] = plot_volume(volume, colorType, alpha)
     if strcmp(colorType, 'channel')
         selectedColor = volume.channelColor;
     elseif strcmp(colorType, 'group')
-        selectedColor = volume.groupColor;
+        selectedColor = volume.plotColor;
     else
         error('Invalid colorType. Use ''channel'' or ''group''.');
     end
