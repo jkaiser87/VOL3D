@@ -160,7 +160,7 @@ structure_acronyms = {'MOs','MOp','SSp','SSs', 'AUD','VIS','AI','ACA'}; %need to
 calculate_overlap_with_brain_structures(volumes, structure_acronyms, outDir, ExperimentName, alpha, false);
 ```
     - Define ABA structures using acronyms (use `Documents\MATLAB\AP_histology\allenAtlas\structure_tree_safe_2017.csv` provided here or in AP_histology to find acronyms for any given structure)
-    - Run `calculate_overlap_with_brain_structures`
+    - Run `calculate_overlap_with_brain_structures
    - **Output** : creates a CSV file (`OUT/*_3D_Overlap_Results_VolumestoBrainStructures.csv`) with % of overlap of each volume to given ABA structure (overlap_fraction_original)
 
 ### Summary Output
