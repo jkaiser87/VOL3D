@@ -119,13 +119,15 @@ To combine data from multiple animals into a single 3D model, follow these steps
 - Adapt the following settings at the beginning of the script:
 
 ```
-ExperimentName = 'EXPABC';    % Name of the experiment
-groups = {'Cre', 'Ctrl'};     % Group names based on filenames (ensure unique names for each group)
-groupColors = {[0.9882, 0.6706, 0.3922], [244/255, 91/255, 105/255], 'blue'};  % Colors for plotting (RGB triplet or standard color names)
-flipside = 'L';               % Can be 'L' or 'R' to flip, or leave empty for no flipping
-alpha = 0.1;                  % Transparency for the 3D plot
-resolution = 100;             % Voxel size (e.g., use 10 for high resolution, 100 for faster runs)
-structure_acronyms = {'MO', 'MOs', 'MOp', 'SS', 'SSp', 'SSs', 'AUD', 'VIS', 'AI', 'ACA'};  % List of ABA structures to plot
+ExperimentName = 'KCN'; %set a prefix for the files saved in the script
+colorMapType = 'channel';  % Set to 'channel' to (re)color by channel, or 'group' if you want to add groupnames that are unique in filename
+colorMap = containers.Map(... % Define the colors and which group they correspond to (by order)
+    {'flexTdT', 'GFP'}, ...  % Group or channel names
+    {'#DB2B39', '#337054',});  % Corresponding colors (465487=blue, DB2B39=red, 7C8289=gray, 337054=green)
+flipside = 'L'; %can be L or R or empty for no flipping
+alpha = 0.1; %transparency for volumes in brain
+resolution = 100; % voxelsize for volume estimation (um). 10 for high resolution, 100 for fast runs (Atlas original is 10)
+structure_acronyms = {'MOs','MOp','SSp','SSs', 'AUD','VIS','AI','ACA'}; %need to match ABA nomenclature
 ```
 
 
