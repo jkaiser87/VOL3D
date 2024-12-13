@@ -1,162 +1,171 @@
-<h1>Volume tracking from slices into CCFv3 ABA space</h1>
-
-Toolbox to track volumes (such as injection volume or stroke volume etc...) and translate the location into CCFv3 ABA Space using FIJI and MATLAB. 
+# Volume tracking from slices into CCFv3 ABA space
+Toolbox to track volumes (such as injections, stroke area, region of interest etc...) and translate the location into CCFv3 ABA Space using FIJI and MATLAB. 
 This pipeline is fully based on the amazing AP_histology (https://github.com/petersaj/AP_histology) for alignment of sections to brain regions and calculation of coordinates into CCFv3 space. 
 It provides an easy-to-follow workflow for processing single-slice TIF files of coronal brain sections and integrating the data into a 3D model for analysis.
 
 ![image](https://github.com/user-attachments/assets/5fa86b22-43e4-4fb3-bc98-8fa4d4731fc2)
 
-<h2>Requirements and Setup</h2>
+## Requirements and Setup
 
-<h3>Data Format</h3>
+### Data Format
+- **Requirement**: Folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal (additional pipeline provided that can help with cropping slide images and merging split-channel images).
+- **Important: Naming of the Files.** The pipeline **relies heavily on filenames** for correct processing and sorting. The correct syntax for the filenames is `EXP1-A2_filename_s001.tif` where:
+  - The part **before the first underscore** (e.g., `EXP1-A2`) is used to **identify the animal** (and should be unique). This can include both the experiment and animal name, separated by a hyphen `-` if necessary.
+  - `_s001` is the slice number (slice numbers must be padded to avoid incorrect sorting, e.g., `_s001`, `_s002`).
+  - **Optional:** `_Ch01` represents the channel (e.g., `_Ch01`, `_DAPI`), if using separate-channel images.
 
-<ul>
-        <li>Requirement: Folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal
-                (additional pipeline provided that can help with cropping slide images and merging split-channel images).</li>
-        <li><strong>Important: Naming of the Files</strong></li>
-        <ul>
-            <li>The pipeline <strong>relies heavily on filenames</strong> for correct processing and sorting. The correct syntax for the filenames is as follows:</li>
-            <pre><code>EXP1-A2_filename_s001.tif</code></pre>
-            <li>
-                where:
-                <ul>
-                    <li>The part <strong>before the first underscore</strong>strong> (e.g., <code>EXP1-A2</code>) is used to <strong>identify the animal</strong> (and should be unique). This can include both the experiment and animal name, separated by a hyphen <code>-</code> if necessary.</li>
-                    <li><code>_s001</code> is the slice number (slice numbers must be padded to avoid incorrect sorting, e.g., <code>_s001</code>, <code>_s002</code>).</li>
-                    <li><strong>Optional:</strong> <code>_Ch01</code> represents the channel (e.g., <code>_Ch01</code>, <code>_DAPI</code>), if using separate-channel images.</li>
-                </ul>
-            </li>
-            <li><strong>Ensure that filenames always start with the animal name</strong> (or a combination of experiment and animal name, unique!). Anything before the first underscore will be treated as the animal identifier. This is critical for correct organization and grouping of data.</li>
-        </ul>
-        <li><strong>Example filenames:</strong></li>
-        <ul>
-            <li><code>EXP1-A2_s001.tif</code></li>
-            <li><code>EXP1-A3_s002_Ch01.tif</code></li>
-            <li><code>EXP2-B5_s005_Ch02.tif</code></li>
-        </ul>
-    </ul>
+**Ensure that filenames always start with the animal name** (or a combination of experiment and animal name, ***unique!***). Anything before the first underscore will be treated as the animal identifier. This is critical for correct organization and grouping of data.
 
-<h3>FIJI.app</h3>
-    <ul>
-        <li><strong>Download FIJI</strong> from the official <a href="https://fiji.sc/">website</a>.</li>
-        <li>Download the necessary <strong>Fiji folder</strong> from this repository and paste it into your <code>FIJI.app</code> folder.</li>
-    </ul>
+**Example filenames that work for the pipeline:**
+```
+EXP1-A2_10x-Cortex_RFP-GFP-NeuN_s001.tif
+EXP1-A3_retroAAV-GFP_DAPI_fNissl_10x_s002_Ch01.tif
+EXP1-A3_retroAAV-GFP_DAPI_fNissl_10x_s002_Ch02.tif
+EXP2-B5_thistext-really-doesnt-matter-as-long-as-the-rest_fits_s005_DAPI.tif
+EXP2-B5_thistext-really-doesnt-matter-as-long-as-the-rest_fits_s005_Alexa488.tif
+```        
 
-<h3>MATLAB</h3>
-  <ul>
-        <li>This pipeline is built on <strong>AP_histology</strong>, developed by Andy Peters, which provides tools to align histology images to the Allen Brain Atlas. We recommend following their detailed documentation for setup and use. Special thanks to the AP_histology team for making this invaluable resource available to the community.</li>
-        <li><strong>AP_histology:</strong> Follow the installation instructions on the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>.</li>
-        <li><strong>MATLAB Toolboxes and Add-ons:</strong></li>
-        <ul>
-            <li>Install the <strong>Curve Fitting Toolbox</strong>.</li>
-            <li>Install the <strong>natsortfile add-on</strong> (Natural-Order Filename Sort Version 3.4.5 by Stephen23).</li>
-        </ul>
-        <li>Download the <strong>MATLAB folder</strong> from this toolbox and place it in your Windows user folder under <code>Documents/MATLAB/</code> (in addition to the AP-histology required files).</li>
-   <li>Make sure the MATLAB folder is added to your path (main menu > add to path > check all files and folders are listed, otherwise MATLAB won't find the scripts)</li>
-    </ul>
- 
-   <h2>Running the Pipeline</h2>
-<h3>1. FIJI Part</h3>
+### FIJI.app
+- **Download FIJI** from the official <a href="https://fiji.sc/">website</a>.
+- Download the necessary **Fiji folder** from this repository and paste it into your `FIJI.app` folder. Make sure that it lands in the right subfolder (Fiji.app/macro/toolsets)
+    
+### MATLAB
+- This pipeline is built on **AP_histology**, developed by Andy Peters, which provides tools to align histology images to the Allen Brain Atlas. We recommend following their detailed documentation for setup and use. Special thanks to the AP_histology team for making this invaluable resource available to the community.
+- **AP_histology:** Follow the installation instructions on the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>
+- **MATLAB Toolboxes and Add-ons:**
+  - Install the **Curve Fitting Toolbox**.
+  - Install the **natsortfile add-on** (Natural-Order Filename Sort Version 3.4.5 by Stephen23).
+- Download the **MATLAB folder** from this toolbox and place it in your Windows user folder under `Documents/MATLAB/` (in addition to the AP-histology required files). Make sure the MATLAB folder is added to your path (main menu > add to path > check all files and folders are listed, otherwise MATLAB won't find the scripts)
 
-<b>1.1. Pre-processing of images 
-*(Optional, creates folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal)</b>
-<ul>
-    <li><b>Open FIJI:</b> Launch FIJI and navigate to the toolbox by selecting <code>>></code> <code>1_PrepareSlicesAsTif</code>.</li>
-    <li>![folder]([Fiji.app/macros/toolsets/icons/folder.png](https://github.com/jkaiser87/VOL3D/blob/master/Fiji.app/macros/toolsets/icons/folder.png)) <b>Select the appropriate folder:</b> Choose the folder that contains either whole-slide overview TIF files or single-slice separate-channel TIF files. If the correct filename convention is followed, the folder can contain multiple animals' data within the same folder.</li>
-    <li><b>If you are working with whole-slide imaging:</b> </li>
-    <li><b>If you need to make adjustments to the histogram</b>: ![image](https://github.com/user-attachments/assets/c781c3c7-77ef-432e-8b27-0ca4efac2c04) Split the channels. Then, if needed, make any adjustments to the split channel images (such as reducing background noise) in Photoshop. ![image](https://github.com/user-attachments/assets/1c4609b5-9eee-4bf0-b8ea-09ae165468b6) Crop the whole-slide images by drawing rectangles around each slice you want to export. At the end, the script will save each slice as a separate file in the subfolder "Slices/ANIMALNAME".</li>
-        <li>![image](https://github.com/user-attachments/assets/db138804-912a-4c5f-8562-f8fe5b60610c) <b>If you are working with separate-channel images:</b> This script will allow you to provide a folder of split-channel images. You will be prompted to select which channels to include and to specify the color for each channel in the final multichannel TIF file.</li>
-        <li>![image](https://github.com/user-attachments/assets/db138804-912a-4c5f-8562-f8fe5b60610c) <b>If you are working with multi-channel images and want to exclude images:</b> This script also allows to remove channels from the image that you do not want and re-arrange the colors.</li>
-</ul>
+## Running the Pipeline
+### FIJI - get coordinates of volume in 2D slices
+#### 1. Pre-processing of images 
+(Optional, creates folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal)
+- Open FIJI and navigate to the toolbox by selecting `>>` `1_PrepareSlicesAsTif`.
+- ![folder](https://github.com/user-attachments/assets/48cd6811-b670-4e04-af52-b52ba09f3ff7)
+Select the appropriate folder: Choose the folder that contains either whole-slide overview TIF files or single-slice separate-channel TIF files. If the correct filename convention is followed, the folder can contain multiple animals' data within the same folder.
+- **If you are working with whole-slide imaging:**
+  - ![image](https://github.com/user-attachments/assets/c781c3c7-77ef-432e-8b27-0ca4efac2c04) Split the channels.
+  - Then, if needed, make any adjustments to the split channel images (such as reducing background noise) in Photoshop.
+  - ![image](https://github.com/user-attachments/assets/1c4609b5-9eee-4bf0-b8ea-09ae165468b6) Crop the whole-slide images by drawing rectangles around each slice you want to export.
+  - At the end, the script will save each slice as a separate file in the subfolder "Slices/ANIMALNAME".
+- **If you are working with separate-channel images:** ![image](https://github.com/user-attachments/assets/db138804-912a-4c5f-8562-f8fe5b60610c) This script will allow you to provide a folder of split-channel images. You will be prompted to select which channels to include and to specify the color for each channel in the final multichannel TIF file.
+  - **If you are working with multi-channel images and want to exclude images:** ![image](https://github.com/user-attachments/assets/db138804-912a-4c5f-8562-f8fe5b60610c) This script also allows to remove channels from the image that you do not want and re-arrange the colors.
 
-<p><b>OUTPUT:</b> The result will be a folder with one multichannel TIF file per section (i.e., per slice). 
-        If multiple animals provided, there will be subfolders in the folder "Slices" according to the animal name.</p>
+**OUTPUT:** The result will be a folder with one multichannel TIF file per section (i.e., per slice).  
+If multiple animals provided, there will be subfolders in the folder "Slices" according to the animal name.
 
-<b>1.2. Volume Tracing (VOL3D)</b>
-<ul>
-    <li>Navigate to the toolbox (<code>>></code> <code>2_VOL3D_VolCoords</code>).</li>
-    <li>![image](https://github.com/user-attachments/assets/7f85864d-4866-470c-bfa6-9bd9f3986a01) Set the folder to a folder containing sections (multichannel) of 1 or more animals (this can be the folder "Slices" created in the previous step or directly a folder containing TIF files. Make sure that no other tif files are in this or a subfolder).</li>
-    <li>![image](https://github.com/user-attachments/assets/2d716049-19c7-4aeb-a8cf-f3071fd66221)
+#### 2. Volume Tracing (VOL3D)
+- Navigate to the toolbox (`>>` `2_VOL3D_VolCoords`).
+- ![image](https://github.com/user-attachments/assets/7f85864d-4866-470c-bfa6-9bd9f3986a01) Set the folder to a folder containing sections (multichannel) of 1 or more animals (this can be the folder "Slices" created in the previous step or directly a folder containing TIF files of 1 animal. Make sure that no other tif files are in this or a subfolder).
+- ![image](https://github.com/user-attachments/assets/2d716049-19c7-4aeb-a8cf-f3071fd66221)
 Preprocess slices: Rotate and flip slices as necessary
-            - Rotate the slices by drawing a line at the midline (from top to bottom)
-            - Injection volumes should be on the same side, so if necessary, flip the section using Ctrl + F.</li>
-    <li>Draw Volume: FIJI will automatically isolate the channel.</li>
-    <ul>
-        <li>If no signal is detected, click "Continue" to proceed to the next slice.</li>
-        <li>If signal is present, use the pre-selected free selection tool to outline the region of interest (there should only be 1 volume present).</li>
-    </ul>
-    <li>You can process several channels, one after another.</li>
-</ul>
+  - Rotate the slices by drawing a line at the midline (from top to bottom)
+  - Injection volumes should be on the same side, so if necessary, flip the section using Ctrl + F.
+- ![shape](https://github.com/user-attachments/assets/63b517f2-2c0e-4299-ae90-5ed4a129c229) Draw Volume: Select channel to be analysed (C1, C2, C3 or C4) - FIJI will automatically isolate the channel and show you a black/white version of the selected channel for each section.
+  - If there is no signal that you want to outline, click "Continue" to proceed to the next slice.
+  - If there is signal present, use the pre-selected free selection tool to outline the region of interest (there should only be 1 volume for each slice!).
+  - Continue through all slices, the pipeline will tell you when all are processed.
+- ![shape](https://github.com/user-attachments/assets/63b517f2-2c0e-4299-ae90-5ed4a129c229) **You can process additional channels**. Re-run this last step and select another channel.
 
-<h3>2. MATLAB Part</h3>
+- **Output:** Running this pipeline will create a subfolder called "VOL" in each animal folder (or in the main folder), which contains CSV and ZIP folders of the coordinates tracked through the pipeline.
 
-<b>2.1. Processing Animal by Animal</b>
-
-<p><b>Step 1:</b> Navigate to the folder, make sure the folder you select contains only the single TIF files for one brain.</p>
-<p><b>Step 2:</b> Open the code file: <code>AP_1_VOL_SingleAnimal_addGroup_20240729.m</code> from this repository.</p>
-
-<p>Customize the following settings in the code:</p>
-
-<ul>
-    <li><b>Define channels to process:</b> Set the channels and colors for your analysis, and give your volume a label (e.g., group or fluorophore). This will be used to color-code your plots later.</li>
-</ul>
-
-<pre><code>
-channelsToProcess = {'C1','C2'}; % List the channels you want to process (make sure corresponding CSV files exist in a subfolder)
+### MATLAB - transform coordinates into CCFv3 space
+#### 1. Animal-specific transformation
+- Open MATLAB
+- Navigate to the folder of 1 animal. This is the folder containing the TIF files, and should also contain a subfolder called "VOL" that was created through the FIJI pipeline
+- Open the code file: `AP_1_VOL_SingleAnimal_addGroup_20240729.m` from this repository.
+- Adjust the following settings in the code:
+  - **Define channels to process:** Set the channels and colors for your analysis, and give your volume a label (e.g., group or fluorophore). This will be used to color-code your plots later.
+    
+```
 channelColors = {'red','green'}; % Set the colors for plotting each channel
 ChannelNames = {'TdTomato','GFP'}; % Give descriptive names for each channel (e.g., Cre/Ctrl, TdT/GFP, Stroke/Injection, etc.)
-</code></pre>
+GroupName = ''; %Give a distinct Group name for grouping with other animals later (eg Ctrl, 10mgDose, ...) or keep empty
+```
+**Optional:** If you're planning to combine results from multiple animals later, you can choose to copy the final output into an additional (existing!) folder. The script will then save the necessary files into this folder. Make sure this folder already exists:
 
-<p><b>Optional:</b> If you're planning to combine results from multiple animals later, you can choose to copy the final output into an additional (existing!) folder. This saves you from manually copying files later.</p>
+`addfolder="C:\......\VOL3D\EXP\";  % You can skip this by adding a % before the line if not needed. Folder needs to already exist, and it needs the full folder address`
 
-<pre><code>
-% If you want to copy the output to a specific folder, set it here
-addfolder = "C:\......\VOL3D\EXP\";  % You can skip this by adding a % before the line if not needed. Folder needs to already exist, and it needs the full folder address
-</code></pre>
+- There are some additional options you can customize:
+  - **Rerun AP-histology:** By default, AP-histology runs automatically the first time, and once defined will be skipped. Set this to 1 if you want to rerun it (eg if you want to re-define the atlas mapping).
+  - **Calculate brain volume:** By default, brain volume is calculated for all brains in step 2, but you can choose to do it now for this brain by setting this to 1.
+  - **Plot ABA structures:** You can plot specific brain structures by defining their names (these should match ABA nomenclature). If you don’t want to plot structures, just comment out the line by adding a %.
 
-<p>There are some additional options you can customize:</p>
-
-<ul>
-    <li><b>Rerun AP-histology:</b> By default, AP-histology runs automatically the first time. Set this to 1 if you want to rerun it for any reason later.</li>
-    <li><b>Calculate brain volume:</b> By default, brain volume is calculated for all brains in step 2, but you can choose to do it now for this brain by setting this to 1.</li>
-    <li><b>Plot ABA structures:</b> You can plot specific brain structures by defining their names (these should match ABA nomenclature). If you don’t want to plot structures, just comment out the line by adding a %.</li>
-</ul>
-
-<pre><code>
+```
 rerun_histology = 0;  % Set to 1 if you want to force rerun AP_histology
-overlap_vol = 0;      % Set to 1 if you want to calculate brain volume now
-% Uncomment the line below if you want to skip plotting ABA structures:
-% structure_names = {'Somatomotor areas', 'Somatosensory areas', 'Visual areas', 'Auditory areas'}; % Structures to plot in the brain (light grey)
-</code></pre>
+overlap_vol = 0; % Set to 1 if you want to calculate the brain volume for this brain (this will be done later for ALL brains anyway in step 2, so only put 1 if you are not planning on running step 2)  
+% structure_names = {'Somatomotor areas', 'Somatosensory areas', 'Visual areas', 'Auditory areas'}; %structures to plot into the brain (light grey)
+```
 
-<p><b>Final Step:</b> Press "Run" or run the script section by section. This will generate a 3D plot and create CSV files for further analysis.</p>
+- **Run Script:** Once all parameter are set, press "Run" or run the script section by section (`Run and advance`).
+  - Running for the first time, AP_histology will be opened throughout the process. Go through the steps to define the levels of your slices within the allen brain atlas as explained in the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>. Briefly:
+    - Set input as tif folder that is open, and output as subfolder "OUT"
+    - Image preprocessing: **ONLY RUN CREATE SLICE**. Do **NOT** resize or rotate any of the images. Otherwise the coordinates drawn in FIJI will not match the images anymore!
+    - Atlas alignment: Run through all 3 steps (`Choose histology atlas slices`, `Auto-align histology/atlas slices`, `Manual align histology/atlas slices`). If asked, always choose to save.
+      - `Choose histology atlas slices`: Scroll through the atlas to find the best match to your section on the left. Press `Enter` to assign it, and use arrows (left/right) to flip to next section.
+      - `Auto-align histology/atlas slices`: Runs automatically, no need to do anything
+      - `Manual align histology/atlas slices`: Go through each slice to check the alignment of the atlas outlines - if you want to re-assign the outlines, click the same landmarks on the left (your section) and right (atlas slice) to transform [needs minimun 3 landmarks before adjusting]. ***Make sure to keep the order the same!***. Click S to save and use arrow to continue to next image.
+    - When done (once manual alignment has been completed), close the window, click into the Command Window of matlab and press any key. This will prompt the script to continue.
 
+- **Output:** This scipt will generate a 3D plot of the volume(s) within the CCFv3 file and create the following additional files for further analysis
+  - `OUT/*_variables.mat`: This file contains the coordinates and can be used to plot several animals into one plot using Script 2
+  - `OUT/FIG/*_3DPlot_Volume.png/.m': This folder contains the 3D Plot (as png and matlab figure file) of the 3d volume(s)
 
-<h4>2.2. Processing Multiple Animals</h4>
-<p>To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: <code>AP_2_VOL_PlotAllAnimalsInFolder_20240502.m</code>.</p>
+#### 2. Plotting Multiple Animals into 1 
+To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `AP_2_VOL_PlotAllAnimalsInFolder_20240502.m`.
+- Optional: Copy/paste `OUT/*_variables.mat` files of all animals to be combined into one subfolder (this may not be necessary if you defined `addfolder` in the previous step).
+- Open the folder where `*_variables.mat` files are stored (set as Current folder).
+- Adapt the following settings at the beginning of the script:
 
-<ul>
-    <li><b>Step 1:</b> Navigate to the folder where the <code>addfolder</code> from the previous script was saved. Alternatively, copy and paste any <code>*_variables.mat</code> file from each animal you want to include into a new folder, and navigate to that folder.</li>
-</ul>
+```
+ExperimentName = 'EXP'; %set a prefix for the files saved in the script
+colorMapType = 'channel';  % Set to 'channel' to (re)color by channel (set in Script 1), or 'group' if defined in Script 1
+colorMap = containers.Map(... % Define the colors and which group they correspond to (by order)
+    {'flexTdT', 'GFP'}, ...  % Group or channel names
+    {'#DB2B39', '#337054',});  % Corresponding colors (465487=blue, DB2B39=red, 7C8289=gray, 337054=green)
+flipside = 'L'; %if L/R: volumes will all be flipped onto L/R hemisphere 
+alpha = 0.1; %transparency for volumes in brain plots
+resolution = 100; % voxelsize for volume estimation (um). 10 for high resolution, 100 for fast runs (Atlas original is 10)
+```
 
-<p><b>Step 2:</b> Adapt the following settings at the beginning of the script:</p>
+- **Run the script by section and adapt as necessary**
+  - **folder setup, Create volumes data**: This always needs to be run to load the volumes into a suitable format for the following steps.
+    - Will load a previously created file if run the second time. If you want to re-run, set forceRun = true or manually delete `OUT/*_3D_VolumeCalc.mat` (useful when you add more animals, or change the color etc in the main files);
+    - **Output**: This script also creates a CSV file with the min & max coordinate in each [x,y,z] direction as well as the estimated volume size by calculating how many voxel are inside the volume (voxel size depend on resolution). Can be found in `OUT/*_MinMax-Axes.csv`.
+  - **Plot volumes with brain**: Run this section to create 3D reconstructions of volumes within a CCFv3 brain.
+    - `plot_volumes_with_brain(volumes, outDir, ExperimentName, alpha, colorType, plotMode)` function parameters:
+      - *volumes* - structure created in previous step
+      - *outDir, ExperimentName, alpha* - (defined in setup)
+      - *colorType* - can be 'group' or 'channel'. 
+      - *plotMode* - can be 0 (plots all available volumes into 1 brain), 1 (split each group into several brains), 2 (split animals into individual brains)
+    - This can also be done on a subset of the data:
+    ```
+    subvolumes = volumes(ismember({volumes.channel}, {'GFP'}));
+    plot_volumes_with_brain(subvolumes, outDir, [ExperimentName,'-GFP'], alpha, 'group',0); 
+    ```
+    - **Output**: This script saves a *.png and *.m figure file of each plot
+      - plotMode 0 - `OUT/*_3DPlot_SinglePanel.png/.m`.  (also creates an angled view)
+      ![image](https://github.com/user-attachments/assets/68d54f91-2e1d-440c-a348-00b0dc26a0d9)
+      - plotMode 1 - `OUT/*_3DPlot_SplitPanel.png/.m`
+      ![image](https://github.com/user-attachments/assets/397932e1-af18-49af-8338-ea8b033ee166)
+      - plotMode 2 - `OUT/*_3DPlot_IndividualPanel.png/.m`
+      ![image](https://github.com/user-attachments/assets/d061e2bd-8a56-43cc-86e4-bdd6c9168ea8)
 
-<pre><code>
-ExperimentName = 'EXPABC';    % Name of the experiment
-groups = {'Cre', 'Ctrl'};     % Group names based on filenames (ensure unique names for each group)
-groupColors = {[0.9882, 0.6706, 0.3922], [244/255, 91/255, 105/255], 'blue'};  % Colors for plotting (RGB triplet or standard color names)
-flipside = 'L';               % Can be 'L' or 'R' to flip, or leave empty for no flipping
-alpha = 0.1;                  % Transparency for the 3D plot
-resolution = 100;             % Voxel size (e.g., use 10 for high resolution, 100 for faster runs)
-structure_acronyms = {'MO', 'MOs', 'MOp', 'SS', 'SSp', 'SSs', 'AUD', 'VIS', 'AI', 'ACA'};  % List of ABA structures to plot
-</code></pre>
+  - **Calculate overlap between volumes (or subvolumes)**: Run this section, if you want to calculate the estimated overlap between volumes.
+    - This script calculates the overlap between each volume with all other volumes and creates a CSV file in `OUT/*_3D_Overlap_Results_AllPairs.csv` with % of overlap between Vol1 compared to Vol2 (ovelap_percentage)
+  - **Calculate overlap with brain structures:** Run this section to calculate overlap with Allen brain atlas structures
+```
+structure_acronyms = {'MOs','MOp','SSp','SSs', 'AUD','VIS','AI','ACA'}; %need to match ABA nomenclature
+calculate_overlap_with_brain_structures(volumes, structure_acronyms, outDir, ExperimentName, alpha, false);
+```
+    - Define ABA structures using acronyms (use `Documents\MATLAB\AP_histology\allenAtlas\structure_tree_safe_2017.csv` provided here or in AP_histology to find acronyms for any given structure)
+    - Run `calculate_overlap_with_brain_structures`
+   - **Output** : creates a CSV file (`OUT/*_3D_Overlap_Results_VolumestoBrainStructures.csv`) with % of overlap of each volume to given ABA structure (overlap_fraction_original)
 
-<ul>
-    <li><b>Step 3:</b> Run the script.</li>
-</ul>
+### Summary Output
+The script will generate the following:
+  - A 3D plot of volumes, either by group, by animal, or combined into one plot.
+  - A CSV file with the percentage overlap between all volumes (all volumes compared to each other).
+  - A CSV file with the percentage overlap between the volumes and the selected ABA structures.
 
-<p><b>Output:</b> The script will generate the following:</p>
-<ul>
-    <li>A 3D plot of volumes, either by group, by animal, or combined into one plot.</li>
-    <li>A CSV file with the percentage overlap between all volumes (all volumes compared to each other).</li>
-    <li>A CSV file with the percentage overlap between the volumes and the selected ABA structures.</li>
-</ul>
