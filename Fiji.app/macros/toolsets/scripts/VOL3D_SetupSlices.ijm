@@ -52,7 +52,9 @@ function processFile(input, docoords, file) {
 print("Processing file " + file);
 open(input + file);
 
-run("Enhance Contrast", "saturated=0.35");
+
+// only add if necessary (eg if no signal visible)
+//run("Enhance Contrast", "saturated=0.35");
 
 // only turn if higher than wide 
 getDimensions(width, height, channels, slices, frames);

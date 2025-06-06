@@ -11,7 +11,7 @@ macro "Setup Folder to process Action Tool - icon:folder.png" {
   Dialog.addDirectory("\n", defaultPath)
   Dialog.addMessage("------------------------");
   Dialog.addCheckbox("Get coordinates? (default false)", false);
-  Dialog.show;
+    Dialog.show;
   
   var input = Dialog.getString();
   if (!endsWith(input, File.separator)) {

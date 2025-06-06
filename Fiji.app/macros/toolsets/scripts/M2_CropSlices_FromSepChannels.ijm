@@ -5,6 +5,7 @@ var input = call("ij.Prefs.get", "input.x",0);
 
 list = getFileList(input);
 suffix = ".tif";
+setBatchMode("hide");
 
 print("Cropping Images in folder \n"+input);
 run("Channels Tool...");
@@ -56,47 +57,52 @@ function processFile(input, subfolders, file) {
 
 if(File.exists(input+File.separator+subfolders[1]+File.separator+file+".tif")) {	
 print("--- File "+file+ " previously processed, skipping \n ---- Delete file in Stack folder if you want to re-do this file.");
-//	open(output2+"\\"+file+".tif"); // uncomment line if you want to redo the slices
+//open(input+"\\"+file+".tif"); // uncomment line if you want to redo the slices
 } else {
 
 print("Processing file "+file);
 run("Close All");
 
-setBatchMode("hide");
-        
-// Get a list of files with the same base name
+
+// Get a list of files with the same base name (check for _Ch0X)
 matchingFiles = newArray();
+hasSplitChannels = false;
+
 for (j = 0; j < list.length; j++) {
-	if (startsWith(list[j], file)) {
-	 matchingFiles = Array.concat(matchingFiles, list[j]);
-}}
-
-print(" --- Merging "+matchingFiles.length+" channels");
-
+    if (startsWith(list[j], file)) {
+        if (matches(list[j], ".*_Ch0\\d\\.tif$")) {
+            hasSplitChannels = true;
+        }
+        matchingFiles = Array.concat(matchingFiles, list[j]);
+    }
+}
 
 // opens files and creates merging command
-for (m = 0; m < matchingFiles.length; m++) {
-	open(input + matchingFiles[m]);
-	rename(matchingFiles[m]); //removes / at beginning of name
-	if(bitDepth() < 24) run("RGB Color");
-	if (m==0) { // create "mergeCommands" in step 1, add to it, else create it
-	mergeCommand = " c" + (m+1) + "=" + matchingFiles[m];
-	} else {
-    mergeCommand += " c" + (m+1) + "=" + matchingFiles[m];
+if (hasSplitChannels) {
+    print("--- Merging " + matchingFiles.length + " channels");
+    
+    for (m = 0; m < matchingFiles.length; m++) {
+        open(input + matchingFiles[m]);
+        rename(matchingFiles[m]); // normalize name
+        if (bitDepth() > 16) run("16-bit");
+        
+        if (m == 0) {
+            mergeCommand = " c" + (m + 1) + "=" + matchingFiles[m];
+        } else {
+            mergeCommand += " c" + (m + 1) + "=" + matchingFiles[m];
+        }
+    }
+
+    mergeCommand += " create";
+    run("Merge Channels...", mergeCommand);
+   
+} else {
+    print("--- No split channels found, assuming merged composite.");
+    open(input + file + ".tif");
 }
-}
+    if (!is("composite")) run("Make Composite", "display=Composite");
+    rename(file);
 
-
-
-
-// Create the merged image
-mergeCommand += " create";
-run("Merge Channels...", mergeCommand);
-
-if (! is("composite")) run("Make Composite", "display=Composite");
-
-
-rename(file);
 
 ROIs = roiManager("count");
 if (ROIs >0) {
