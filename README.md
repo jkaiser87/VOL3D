@@ -29,9 +29,19 @@ EXP2-B5_thistext-really-doesnt-matter-as-long-as-the-rest_fits_s005_Alexa488.tif
 - **Download FIJI** from the official <a href="https://fiji.sc/">website</a>.
 - Download the necessary **Fiji folder** from this repository and paste it into your `FIJI.app` folder. Make sure that it lands in the right subfolder (Fiji.app/macro/toolsets)
     
-### MATLAB
-- This pipeline is built on **AP_histology**, developed by Andy Peters, which provides tools to align histology images to the Allen Brain Atlas. We recommend following their detailed documentation for setup and use. Special thanks to the AP_histology team for making this invaluable resource available to the community.
-- **AP_histology:** Follow the installation instructions on the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>
+    
+### MATLAB (tested on 2023a)
+
+This pipeline builds on AP_histology, a powerful toolkit for aligning histological images to the Allen Brain Atlas. We recommend following their excellent documentation for installation and usage. Special thanks to the AP_histology team for making this invaluable resource freely available to the community.
+
+#### AP_histology
+
+[AP_histology](https://github.com/petersaj/AP_histology): Follow the installation instructions on the original AP_histology GitHub repository.
+
+OR
+
+[devAP_histology](https://github.com/jkaiser87/devAP_histology) (forked for developmental atlas support): Supports both adult and developmental mouse brain atlases.
+
 - **MATLAB Toolboxes and Add-ons:**
   - Install the **Curve Fitting Toolbox**.
   - Install the **natsortfile add-on** (Natural-Order Filename Sort Version 3.4.5 by Stephen23).
