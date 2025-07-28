@@ -100,6 +100,10 @@ Preprocess slices: Rotate and flip slices as necessary
 - Run "Create 3D VOlume in CCF" -> This will display the volume within CCF space in a plot on the right.
 - You can also choose to mirror the volume onto left/right hemisphere, choose what to color by etc.
 
+
+<img width="1400" height="727" alt="image" src="https://github.com/user-attachments/assets/d241d764-3b43-43b3-a183-53f894f9d29a" />
+
+
 To prepare for step 2 (summarizing several animals in one brain), use the button "save to additional folder" and choose a folder where the *_variables.mat file will be stored. Add all additional animals after processing them to this same folder.
 
 #### 2. Plotting Multiple Animals into 1 
