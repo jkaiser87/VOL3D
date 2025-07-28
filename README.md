@@ -119,6 +119,10 @@ To combine data from multiple animals into a single 3D model, follow these steps
 - adapt colors (either add a plot by Group or Channel option or choose a different "color by" value) and click "Create Plot" to get the full overview.
 - You can calculate overlap between each volume with each other ("Calculate overlap btw Volumes")
 - Or select brain structures to calculate overlap between volumes vs. those brain structures
+- Both options return a CSV file with volume area as well as estimated overlap (voxel based)
+
+- "Save Plot" saves the currently displayed plot to a file
+For additional splitting and coloring options, check the "Batch processing" options.
 
 
 ### Summary Output
