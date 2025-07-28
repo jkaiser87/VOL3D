@@ -82,42 +82,14 @@ Preprocess slices: Rotate and flip slices as necessary
 - **Output:** Running this pipeline will create a subfolder called "VOL" in each animal folder (or in the main folder), which contains CSV and ZIP folders of the coordinates tracked through the pipeline.
 
 ### MATLAB - transform coordinates into CCFv3 space
+
 #### 1. Animal-specific transformation
 - Open MATLAB
 - Navigate to the folder of 1 animal. This is the folder containing the TIF files, and should also contain a subfolder called "VOL" that was created through the FIJI pipeline
-- Open the code file: `VOL3D_Step1_SingleAnimal_addGroup.m` from this repository.
-- Adjust the following settings in the code:
-  - **Define channels to process:** Set the channels and colors for your analysis, and give your volume a label (e.g., group or fluorophore). This will be used to color-code your plots later.
-    
-```
-channelColors = {'red','green'}; % Set the colors for plotting each channel
-ChannelNames = {'TdTomato','GFP'}; % Give descriptive names for each channel (e.g., Cre/Ctrl, TdT/GFP, Stroke/Injection, etc.)
-GroupName = ''; %Give a distinct Group name for grouping with other animals later (eg Ctrl, 10mgDose, ...) or keep empty
-```
-**Optional:** If you're planning to combine results from multiple animals later, you can choose to copy the final output into an additional (existing!) folder. The script will then save the necessary files into this folder. Make sure this folder already exists:
-
-`addfolder="C:\......\VOL3D\EXP\";  % You can skip this by adding a % before the line if not needed. Folder needs to already exist, and it needs the full folder address`
-
-- There are some additional options you can customize:
-  - **Rerun AP-histology:** By default, AP-histology runs automatically the first time, and once defined will be skipped. Set this to 1 if you want to rerun it (eg if you want to re-define the atlas mapping).
-  - **Calculate brain volume:** By default, brain volume is calculated for all brains in step 2, but you can choose to do it now for this brain by setting this to 1.
-  - **Plot ABA structures:** You can plot specific brain structures by defining their names (these should match ABA nomenclature). If you don’t want to plot structures, just comment out the line by adding a %.
-
-```
-rerun_histology = 0;  % Set to 1 if you want to force rerun AP_histology
-overlap_vol = 0; % Set to 1 if you want to calculate the brain volume for this brain (this will be done later for ALL brains anyway in step 2, so only put 1 if you are not planning on running step 2)  
-% structure_names = {'Somatomotor areas', 'Somatosensory areas', 'Visual areas', 'Auditory areas'}; %structures to plot into the brain (light grey)
-```
-
-- **Run Script:** Once all parameter are set, press "Run" or run the script section by section (`Run and advance`).
-  - Running for the first time, AP_histology will be opened throughout the process. Go through the steps to define the levels of your slices within the allen brain atlas as explained in the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>. Briefly:
-    - Set input as tif folder that is open, and output as subfolder "OUT"
-    - Image preprocessing: **ONLY RUN CREATE SLICE**. Do **NOT** resize or rotate any of the images. Otherwise the coordinates drawn in FIJI will not match the images anymore!
-    - Atlas alignment: Run through all 3 steps (`Choose histology atlas slices`, `Auto-align histology/atlas slices`, `Manual align histology/atlas slices`). If asked, always choose to save.
-      - `Choose histology atlas slices`: Scroll through the atlas to find the best match to your section on the left. Press `Enter` to assign it, and use arrows (left/right) to flip to next section.
-      - `Auto-align histology/atlas slices`: Runs automatically, no need to do anything
-      - `Manual align histology/atlas slices`: Go through each slice to check the alignment of the atlas outlines - if you want to re-assign the outlines, click the same landmarks on the left (your section) and right (atlas slice) to transform [needs minimun 3 landmarks before adjusting]. ***Make sure to keep the order the same!***. Click S to save and use arrow to continue to next image.
-    - When done (once manual alignment has been completed), close the window, click into the Command Window of matlab and press any key. This will prompt the script to continue.
+- Open the code file: `VOL3D_Step1_Animal_GUI.m` from this repository.
+- Set Current folder to the folder containing the tif files of a single animal (eg 'Slices/EXP1-A1/')
+- Run the script (if asked, "add to path")
+- a GUI will pop up:
 
 - **Output:** This scipt will generate a 3D plot of the volume(s) within the CCFv3 file and create the following additional files for further analysis
   - `OUT/*_variables.mat`: This file contains the coordinates and can be used to plot several animals into one plot using Script 2
