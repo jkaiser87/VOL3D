@@ -77,6 +77,7 @@ Preprocess slices: Rotate and flip slices as necessary
   - If there is signal present, use the pre-selected free selection tool to outline the region of interest (there should only be 1 volume for each slice!).
   - Continue through all slices, the pipeline will tell you when all are processed.
 - ![shape](https://github.com/user-attachments/assets/63b517f2-2c0e-4299-ae90-5ed4a129c229) **You can process additional channels**. Re-run this last step and select another channel.
+- This pipeline currently only works for 1 volume per channel, it can not be used to create several volumes from the same channel. 
 
 - **Output:** Running this pipeline will create a subfolder called "VOL" in each animal folder (or in the main folder), which contains CSV and ZIP folders of the coordinates tracked through the pipeline.
 
