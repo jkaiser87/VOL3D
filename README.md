@@ -91,6 +91,16 @@ Preprocess slices: Rotate and flip slices as necessary
 - Run the script (if asked, "add to path")
 - a GUI will pop up:
 
+<img width="1397" height="727" alt="image" src="https://github.com/user-attachments/assets/0ee8171d-4c2e-468c-9c6e-10d61f91d568" />
+
+
+- Check that all tif files are found and listed on the left
+- Choose channel(s) and assign an optional group.
+- Select the appropriate Atlas Type (e.g. adult or developmental) to enable AP_histology.
+- Run AP_histology (alignment to CCF). After running through all steps (up to manual alignment), close the GUI and re-start CELL3D to refresh.
+- Run "Create 3D VOlume in CCF" -> This will display the volume within CCF space in a plot on the right.
+- You can also choose to mirror the volume onto left/right hemisphere, choose what to color by etc.
+
 - **Output:** This scipt will generate a 3D plot of the volume(s) within the CCFv3 file and create the following additional files for further analysis
   - `OUT/*_variables.mat`: This file contains the coordinates and can be used to plot several animals into one plot using Script 2
   - `OUT/FIG/*_3DPlot_Volume.png/.m': This folder contains the 3D Plot (as png and matlab figure file) of the 3d volume(s)
