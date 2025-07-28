@@ -87,7 +87,6 @@ Preprocess slices: Rotate and flip slices as necessary
 - Open MATLAB
 - Navigate to the folder of 1 animal. This is the folder containing the TIF files, and should also contain a subfolder called "VOL" that was created through the FIJI pipeline
 - Open the code file: `VOL3D_Step1_Animal_GUI.m` from this repository.
-- Set Current folder to the folder containing the tif files of a single animal (eg 'Slices/EXP1-A1/')
 - Run the script (if asked, "add to path")
 - a GUI will pop up:
 
@@ -104,13 +103,21 @@ Preprocess slices: Rotate and flip slices as necessary
 <img width="1400" height="727" alt="image" src="https://github.com/user-attachments/assets/d241d764-3b43-43b3-a183-53f894f9d29a" />
 
 
-To prepare for step 2 (summarizing several animals in one brain), use the button "save to additional folder" and choose a folder where the *_variables.mat file will be stored. Add all additional animals after processing them to this same folder.
+To prepare for step 2 (summarizing several animals in one brain), use the button "save to additional folder" and choose a folder where the *_volumes.mat file will be stored. Add all additional animals after processing them to this same folder.
 
 #### 2. Plotting Multiple Animals into 1 
 To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `VOL3D_Step2_PlotAllAndCalculateVolumes.m`.
-- Optional: Copy/paste `OUT/*_variables.mat` files of all animals to be combined into one subfolder (this may not be necessary if you defined `addfolder` in the previous step).
-- Open the folder where `*_variables.mat` files are stored (set as Current folder).
-- Adapt the following settings at the beginning of the script:
+
+- Open MATLAB
+- Navigate to the folder in which the *_volumes.mat files were saved in step 1.
+- Open `VOL3D_Step2_GUI.m` in MATLAB.
+- Run the script (if asked, "add to path")
+- a GUI will pop up:
+
+<img width="1403" height="731" alt="image" src="https://github.com/user-attachments/assets/8eb6491e-a967-43e7-a23a-c7190d09d5a0" />
+
+
+
 
 ```
 ExperimentName = 'EXP'; %set a prefix for the files saved in the script
