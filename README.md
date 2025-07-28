@@ -116,54 +116,9 @@ To combine data from multiple animals into a single 3D model, follow these steps
 
 <img width="1403" height="731" alt="image" src="https://github.com/user-attachments/assets/8eb6491e-a967-43e7-a23a-c7190d09d5a0" />
 
+- adapt colors (either add a plot by Group or Channel option or choose a different "color by" value) and click "Create Plot" to get the full overview.
+- 
 
-
-
-```
-ExperimentName = 'EXP'; %set a prefix for the files saved in the script
-colorMapType = 'channel';  % Set to 'channel' to (re)color by channel (set in Script 1), or 'group' if defined in Script 1
-colorMap = containers.Map(... % Define the colors and which group they correspond to (by order)
-    {'flexTdT', 'GFP'}, ...  % Group or channel names
-    {'#DB2B39', '#337054',});  % Corresponding colors (465487=blue, DB2B39=red, 7C8289=gray, 337054=green)
-flipside = 'L'; %if L/R: volumes will all be flipped onto L/R hemisphere 
-alpha = 0.1; %transparency for volumes in brain plots
-resolution = 100; % voxelsize for volume estimation (um). 10 for high resolution, 100 for fast runs (Atlas original is 10)
-```
-
-- **Run the script by section and adapt as necessary**
-  - **folder setup, Create volumes data**: This always needs to be run to load the volumes into a suitable format for the following steps.
-    - Will load a previously created file if run the second time. If you want to re-run, set forceRun = true or manually delete `OUT/*_3D_VolumeCalc.mat` (useful when you add more animals, or change the color etc in the main files);
-    - **Output**: This script also creates a CSV file with the min & max coordinate in each [x,y,z] direction as well as the estimated volume size by calculating how many voxel are inside the volume (voxel size depend on resolution). Can be found in `OUT/*_MinMax-Axes.csv`.
-  - **Plot volumes with brain**: Run this section to create 3D reconstructions of volumes within a CCFv3 brain.
-    - `plot_volumes_with_brain(volumes, outDir, ExperimentName, alpha, colorType, plotMode)` function parameters:
-      - *volumes* - structure created in previous step
-      - *outDir, ExperimentName, alpha* - (defined in setup)
-      - *colorType* - can be 'group' or 'channel'. 
-      - *plotMode* - can be 0 (plots all available volumes into 1 brain), 1 (split each group into several brains), 2 (split animals into individual brains)
-    - This can also be done on a subset of the data:
-    ```
-    subvolumes = volumes(ismember({volumes.channel}, {'GFP'}));
-    plot_volumes_with_brain(subvolumes, outDir, [ExperimentName,'-GFP'], alpha, 'group',0); 
-    ```
-    - **Output**: This script saves a *.png and *.m figure file of each plot
-      - plotMode 0 - `OUT/*_3DPlot_SinglePanel.png/.m`.  (also creates an angled view)
-      ![image](https://github.com/user-attachments/assets/68d54f91-2e1d-440c-a348-00b0dc26a0d9)
-      - plotMode 1 - `OUT/*_3DPlot_SplitPanel.png/.m`
-      ![image](https://github.com/user-attachments/assets/397932e1-af18-49af-8338-ea8b033ee166)
-      - plotMode 2 - `OUT/*_3DPlot_IndividualPanel.png/.m`
-      ![image](https://github.com/user-attachments/assets/d061e2bd-8a56-43cc-86e4-bdd6c9168ea8)
-
-  - **Calculate overlap between volumes (or subvolumes)**: Run this section, if you want to calculate the estimated overlap between volumes.
-    - This script calculates the overlap between each volume with all other volumes and creates a CSV file in `OUT/*_3D_Overlap_Results_AllPairs.csv` with % of overlap between Vol1 compared to Vol2 (ovelap_percentage)
-  - **Calculate overlap with brain structures:** Run this section to calculate overlap with Allen brain atlas structures
-    - Define ABA structures using acronyms (use `Documents\MATLAB\AP_histology\allenAtlas\structure_tree_safe_2017.csv` provided here or in AP_histology to find acronyms for any given structure)
-    - Run `calculate_overlap_with_brain_structures` 
-```
-structure_acronyms = {'MOs','MOp','SSp','SSs', 'AUD','VIS','AI','ACA'}; %need to match ABA nomenclature
-calculate_overlap_with_brain_structures(volumes, structure_acronyms, outDir, ExperimentName, alpha, false);
-```
-
-   - **Output** : creates a CSV file (`OUT/*_3D_Overlap_Results_VolumestoBrainStructures.csv`) with % of overlap of each volume to given ABA structure (overlap_fraction_original)
 
 ### Summary Output
 The script will generate the following:
