@@ -49,8 +49,8 @@ OR
 
 ## Running the Pipeline
 ### FIJI - get coordinates of volume in 2D slices
-#### 1. Pre-processing of images 
-(Optional, creates folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal)
+#### 1. OPTIONAL: Pre-processing of images
+Run this part to create a folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal. Skip to Step 2 if your files are already sorted into 1 folder.
 - Open FIJI and navigate to the toolbox by selecting `>>` `1_PrepareSlicesAsTif`.
 - ![folder](https://github.com/user-attachments/assets/48cd6811-b670-4e04-af52-b52ba09f3ff7)
 Select the appropriate folder: Choose the folder that contains either whole-slide overview TIF files or single-slice separate-channel TIF files. If the correct filename convention is followed, the folder can contain multiple animals' data within the same folder.
