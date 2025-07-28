@@ -102,8 +102,8 @@ Preprocess slices: Rotate and flip slices as necessary
 
 <img width="1400" height="727" alt="image" src="https://github.com/user-attachments/assets/d241d764-3b43-43b3-a183-53f894f9d29a" />
 
-
 To prepare for step 2 (summarizing several animals in one brain), use the button "save to additional folder" and choose a folder where the *_volumes.mat file will be stored. Add all additional animals after processing them to this same folder.
+If you want to calculate volume overlap with brain structures with only 1 animal, you can still run step 2 on only 1 animal.
 
 #### 2. Plotting Multiple Animals into 1 
 To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `VOL3D_Step2_PlotAllAndCalculateVolumes.m`.
@@ -117,7 +117,8 @@ To combine data from multiple animals into a single 3D model, follow these steps
 <img width="1403" height="731" alt="image" src="https://github.com/user-attachments/assets/8eb6491e-a967-43e7-a23a-c7190d09d5a0" />
 
 - adapt colors (either add a plot by Group or Channel option or choose a different "color by" value) and click "Create Plot" to get the full overview.
-- 
+- You can calculate overlap between each volume with each other ("Calculate overlap btw Volumes")
+- Or select brain structures to calculate overlap between volumes vs. those brain structures
 
 
 ### Summary Output
