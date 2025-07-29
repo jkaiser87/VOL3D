@@ -13,8 +13,8 @@ files = dir(fullfile(baseDir, '**', '*_volume.mat'));
 
 % Predefined variables
 handles = struct();
-btnSaveBatch = [];
-btnUpdatePlot = [];
+handles.btnSaveBatch = [];
+handles.btnUpdatePlot = [];
 
 % Define color scheme (RGB 0-1)
 handles.colors.lightBg = [0.96 0.96 0.96];    % #F5F5F5
@@ -163,6 +163,7 @@ for r = 1:size(t.Data,1)
             s = uistyle('BackgroundColor', color);
             addStyle(t, s, 'cell', [r, handles.colIdx.PlotColor]);
         catch
+            % optionally log or warn
         end
     end
 end

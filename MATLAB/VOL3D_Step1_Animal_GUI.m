@@ -939,6 +939,8 @@ end
         % Make smoothed volume
         coord3D = coordCCF(:, [1 3 2]); % reorder to Z, X, Y
         [k1, f] = boundary(coord3D);
+
+
         vSmooth = laplacianSmooth(coord3D, k1, 0.1, 5);
         
         % --- Hemisphere and summary ---
@@ -959,9 +961,9 @@ end
         elseif hasLeft && hasRight
             hemi = "Mixed";
         end
-
-palette = getCurrentPalette(handles.baseDir);
-channelColor = palette(mod(ch-1, size(palette, 1)) + 1, :);  % cycle if more volumes than colors
+        
+        palette = getCurrentPalette(handles.baseDir);
+        channelColor = palette(mod(ch-1, size(palette, 1)) + 1, :);  % cycle if more volumes than colors
         volume(ch).Animal = Animal;
         volume(ch).channels = chan;
         volume(ch).ChannelName = channelNames{ch};
@@ -1029,6 +1031,7 @@ function handles = saveCCFToAdditionalFolder(handles)
     
     guidata(handles.fig, handles);
 end
+
 
 
 %% plotting
@@ -1187,6 +1190,30 @@ end
     set(ax, 'ZDir', 'reverse');
     view(ax, az, el);
     hold(ax, 'off');
+end
+
+function smoothedVertices = laplacianSmooth(vertices, faces, lambda, iterations)
+    % vertices: Nx3 matrix of vertex coordinates
+    % faces: Mx3 matrix of indices into vertices
+    % lambda: Smoothing factor, typical values are in the range 0.5 - 1
+    % iterations: Number of times the smoothing operation is applied
+
+    smoothedVertices = vertices;
+    for iter = 1:iterations
+        for i = 1:size(vertices, 1)
+            % Find all faces that include this vertex
+            [row, ~] = find(faces == i);
+            % Get unique vertices connected to the current vertex
+            neighborIdx = unique(faces(row, :));
+            neighborIdx(neighborIdx == i) = [];  % Remove the vertex itself
+
+            % Calculate the mean position of neighboring vertices
+            meanPos = mean(smoothedVertices(neighborIdx, :), 1);
+
+            % Update the vertex position
+            smoothedVertices(i, :) = smoothedVertices(i, :) + lambda * (meanPos - smoothedVertices(i, :));
+        end
+    end
 end
 
 %% plotting helper
