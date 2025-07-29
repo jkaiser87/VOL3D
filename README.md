@@ -29,9 +29,15 @@ EXP2-B5_thistext-really-doesnt-matter-as-long-as-the-rest_fits_s005_Alexa488.tif
 - **Download FIJI** from the official <a href="https://fiji.sc/">website</a>.
 - Download the necessary **Fiji folder** from this repository and paste it into your `FIJI.app` folder. Make sure that it lands in the right subfolder (Fiji.app/macro/toolsets)
     
-### MATLAB
-- This pipeline is built on **AP_histology**, developed by Andy Peters, which provides tools to align histology images to the Allen Brain Atlas. We recommend following their detailed documentation for setup and use. Special thanks to the AP_histology team for making this invaluable resource available to the community.
-- **AP_histology:** Follow the installation instructions on the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>
+    
+### MATLAB (tested on 2023a)
+
+This pipeline builds on AP_histology, a powerful toolkit for aligning histological images to the Allen Brain Atlas. We recommend following their excellent documentation for installation and usage. Special thanks to the AP_histology team for making this invaluable resource freely available to the community.
+
+#### AP_histology
+
+[devAP_histology](https://github.com/jkaiser87/devAP_histology) (forked for developmental atlas support): Supports both adult and developmental mouse brain atlases - the pipeline was built using this, so for the moment you will have to go through this installation, future update will provide a version that directly works with https://github.com/petersaj/AP_histology
+
 - **MATLAB Toolboxes and Add-ons:**
   - Install the **Curve Fitting Toolbox**.
   - Install the **natsortfile add-on** (Natural-Order Filename Sort Version 3.4.5 by Stephen23).
@@ -39,8 +45,8 @@ EXP2-B5_thistext-really-doesnt-matter-as-long-as-the-rest_fits_s005_Alexa488.tif
 
 ## Running the Pipeline
 ### FIJI - get coordinates of volume in 2D slices
-#### 1. Pre-processing of images 
-(Optional, creates folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal)
+#### 1. OPTIONAL: Pre-processing of images
+Run this part to create a folder containing single-slice TIF files of one coronal brain, sorted from rostral to caudal. Skip to Step 2 if your files are already sorted into 1 folder.
 - Open FIJI and navigate to the toolbox by selecting `>>` `1_PrepareSlicesAsTif`.
 - ![folder](https://github.com/user-attachments/assets/48cd6811-b670-4e04-af52-b52ba09f3ff7)
 Select the appropriate folder: Choose the folder that contains either whole-slide overview TIF files or single-slice separate-channel TIF files. If the correct filename convention is followed, the folder can contain multiple animals' data within the same folder.
@@ -67,102 +73,53 @@ Preprocess slices: Rotate and flip slices as necessary
   - If there is signal present, use the pre-selected free selection tool to outline the region of interest (there should only be 1 volume for each slice!).
   - Continue through all slices, the pipeline will tell you when all are processed.
 - ![shape](https://github.com/user-attachments/assets/63b517f2-2c0e-4299-ae90-5ed4a129c229) **You can process additional channels**. Re-run this last step and select another channel.
+- This pipeline currently only works for 1 volume per channel, it can not be used to create several volumes from the same channel. 
 
 - **Output:** Running this pipeline will create a subfolder called "VOL" in each animal folder (or in the main folder), which contains CSV and ZIP folders of the coordinates tracked through the pipeline.
 
 ### MATLAB - transform coordinates into CCFv3 space
+
 #### 1. Animal-specific transformation
 - Open MATLAB
 - Navigate to the folder of 1 animal. This is the folder containing the TIF files, and should also contain a subfolder called "VOL" that was created through the FIJI pipeline
-- Open the code file: `VOL3D_Step1_SingleAnimal_addGroup.m` from this repository.
-- Adjust the following settings in the code:
-  - **Define channels to process:** Set the channels and colors for your analysis, and give your volume a label (e.g., group or fluorophore). This will be used to color-code your plots later.
-    
-```
-channelColors = {'red','green'}; % Set the colors for plotting each channel
-ChannelNames = {'TdTomato','GFP'}; % Give descriptive names for each channel (e.g., Cre/Ctrl, TdT/GFP, Stroke/Injection, etc.)
-GroupName = ''; %Give a distinct Group name for grouping with other animals later (eg Ctrl, 10mgDose, ...) or keep empty
-```
-**Optional:** If you're planning to combine results from multiple animals later, you can choose to copy the final output into an additional (existing!) folder. The script will then save the necessary files into this folder. Make sure this folder already exists:
+- Open the code file: `VOL3D_Step1_Animal_GUI.m` from this repository.
+- Run the script (if asked, "add to path")
+- a GUI will pop up:
 
-`addfolder="C:\......\VOL3D\EXP\";  % You can skip this by adding a % before the line if not needed. Folder needs to already exist, and it needs the full folder address`
+<img width="1397" height="727" alt="image" src="https://github.com/user-attachments/assets/0ee8171d-4c2e-468c-9c6e-10d61f91d568" />
 
-- There are some additional options you can customize:
-  - **Rerun AP-histology:** By default, AP-histology runs automatically the first time, and once defined will be skipped. Set this to 1 if you want to rerun it (eg if you want to re-define the atlas mapping).
-  - **Calculate brain volume:** By default, brain volume is calculated for all brains in step 2, but you can choose to do it now for this brain by setting this to 1.
-  - **Plot ABA structures:** You can plot specific brain structures by defining their names (these should match ABA nomenclature). If you don’t want to plot structures, just comment out the line by adding a %.
+- Check that all tif files are found and listed on the left
+- Choose channel(s) and assign an optional channel name (to label the volume, eg with GFP or Cre or stroke etc) and assign a group to the animal.
+- Select the appropriate Atlas Type (e.g. adult or developmental) to enable AP_histology.
+- Run AP_histology (alignment to CCF). After running through all steps (up to manual alignment), close the GUI and re-start CELL3D to refresh.
+- Run "Create 3D VOlume in CCF" -> This will display the volume within CCF space in a plot on the right.
+- You can also choose to mirror the volume onto left/right hemisphere, choose what to color by etc.
 
-```
-rerun_histology = 0;  % Set to 1 if you want to force rerun AP_histology
-overlap_vol = 0; % Set to 1 if you want to calculate the brain volume for this brain (this will be done later for ALL brains anyway in step 2, so only put 1 if you are not planning on running step 2)  
-% structure_names = {'Somatomotor areas', 'Somatosensory areas', 'Visual areas', 'Auditory areas'}; %structures to plot into the brain (light grey)
-```
 
-- **Run Script:** Once all parameter are set, press "Run" or run the script section by section (`Run and advance`).
-  - Running for the first time, AP_histology will be opened throughout the process. Go through the steps to define the levels of your slices within the allen brain atlas as explained in the <a href="https://github.com/petersaj/AP_histology">AP_histology GitHub page</a>. Briefly:
-    - Set input as tif folder that is open, and output as subfolder "OUT"
-    - Image preprocessing: **ONLY RUN CREATE SLICE**. Do **NOT** resize or rotate any of the images. Otherwise the coordinates drawn in FIJI will not match the images anymore!
-    - Atlas alignment: Run through all 3 steps (`Choose histology atlas slices`, `Auto-align histology/atlas slices`, `Manual align histology/atlas slices`). If asked, always choose to save.
-      - `Choose histology atlas slices`: Scroll through the atlas to find the best match to your section on the left. Press `Enter` to assign it, and use arrows (left/right) to flip to next section.
-      - `Auto-align histology/atlas slices`: Runs automatically, no need to do anything
-      - `Manual align histology/atlas slices`: Go through each slice to check the alignment of the atlas outlines - if you want to re-assign the outlines, click the same landmarks on the left (your section) and right (atlas slice) to transform [needs minimun 3 landmarks before adjusting]. ***Make sure to keep the order the same!***. Click S to save and use arrow to continue to next image.
-    - When done (once manual alignment has been completed), close the window, click into the Command Window of matlab and press any key. This will prompt the script to continue.
+<img width="1400" height="727" alt="image" src="https://github.com/user-attachments/assets/d241d764-3b43-43b3-a183-53f894f9d29a" />
 
-- **Output:** This scipt will generate a 3D plot of the volume(s) within the CCFv3 file and create the following additional files for further analysis
-  - `OUT/*_variables.mat`: This file contains the coordinates and can be used to plot several animals into one plot using Script 2
-  - `OUT/FIG/*_3DPlot_Volume.png/.m': This folder contains the 3D Plot (as png and matlab figure file) of the 3d volume(s)
+To prepare for step 2 (summarizing several animals in one brain), use the button "save to additional folder" and choose a folder where the *_volumes.mat file will be stored. Add all additional animals after processing them to this same folder.
+If you want to calculate volume overlap with brain structures with only 1 animal, you can still run step 2 on only 1 animal.
 
 #### 2. Plotting Multiple Animals into 1 
 To combine data from multiple animals into a single 3D model, follow these steps using the second MATLAB script: `VOL3D_Step2_PlotAllAndCalculateVolumes.m`.
-- Optional: Copy/paste `OUT/*_variables.mat` files of all animals to be combined into one subfolder (this may not be necessary if you defined `addfolder` in the previous step).
-- Open the folder where `*_variables.mat` files are stored (set as Current folder).
-- Adapt the following settings at the beginning of the script:
 
-```
-ExperimentName = 'EXP'; %set a prefix for the files saved in the script
-colorMapType = 'channel';  % Set to 'channel' to (re)color by channel (set in Script 1), or 'group' if defined in Script 1
-colorMap = containers.Map(... % Define the colors and which group they correspond to (by order)
-    {'flexTdT', 'GFP'}, ...  % Group or channel names
-    {'#DB2B39', '#337054',});  % Corresponding colors (465487=blue, DB2B39=red, 7C8289=gray, 337054=green)
-flipside = 'L'; %if L/R: volumes will all be flipped onto L/R hemisphere 
-alpha = 0.1; %transparency for volumes in brain plots
-resolution = 100; % voxelsize for volume estimation (um). 10 for high resolution, 100 for fast runs (Atlas original is 10)
-```
+- Open MATLAB
+- Navigate to the folder in which the *_volumes.mat files were saved in step 1.
+- Open `VOL3D_Step2_GUI.m` in MATLAB.
+- Run the script (if asked, "add to path")
+- a GUI will pop up:
 
-- **Run the script by section and adapt as necessary**
-  - **folder setup, Create volumes data**: This always needs to be run to load the volumes into a suitable format for the following steps.
-    - Will load a previously created file if run the second time. If you want to re-run, set forceRun = true or manually delete `OUT/*_3D_VolumeCalc.mat` (useful when you add more animals, or change the color etc in the main files);
-    - **Output**: This script also creates a CSV file with the min & max coordinate in each [x,y,z] direction as well as the estimated volume size by calculating how many voxel are inside the volume (voxel size depend on resolution). Can be found in `OUT/*_MinMax-Axes.csv`.
-  - **Plot volumes with brain**: Run this section to create 3D reconstructions of volumes within a CCFv3 brain.
-    - `plot_volumes_with_brain(volumes, outDir, ExperimentName, alpha, colorType, plotMode)` function parameters:
-      - *volumes* - structure created in previous step
-      - *outDir, ExperimentName, alpha* - (defined in setup)
-      - *colorType* - can be 'group' or 'channel'. 
-      - *plotMode* - can be 0 (plots all available volumes into 1 brain), 1 (split each group into several brains), 2 (split animals into individual brains)
-    - This can also be done on a subset of the data:
-    ```
-    subvolumes = volumes(ismember({volumes.channel}, {'GFP'}));
-    plot_volumes_with_brain(subvolumes, outDir, [ExperimentName,'-GFP'], alpha, 'group',0); 
-    ```
-    - **Output**: This script saves a *.png and *.m figure file of each plot
-      - plotMode 0 - `OUT/*_3DPlot_SinglePanel.png/.m`.  (also creates an angled view)
-      ![image](https://github.com/user-attachments/assets/68d54f91-2e1d-440c-a348-00b0dc26a0d9)
-      - plotMode 1 - `OUT/*_3DPlot_SplitPanel.png/.m`
-      ![image](https://github.com/user-attachments/assets/397932e1-af18-49af-8338-ea8b033ee166)
-      - plotMode 2 - `OUT/*_3DPlot_IndividualPanel.png/.m`
-      ![image](https://github.com/user-attachments/assets/d061e2bd-8a56-43cc-86e4-bdd6c9168ea8)
+<img width="1403" height="731" alt="image" src="https://github.com/user-attachments/assets/8eb6491e-a967-43e7-a23a-c7190d09d5a0" />
 
-  - **Calculate overlap between volumes (or subvolumes)**: Run this section, if you want to calculate the estimated overlap between volumes.
-    - This script calculates the overlap between each volume with all other volumes and creates a CSV file in `OUT/*_3D_Overlap_Results_AllPairs.csv` with % of overlap between Vol1 compared to Vol2 (ovelap_percentage)
-  - **Calculate overlap with brain structures:** Run this section to calculate overlap with Allen brain atlas structures
-    - Define ABA structures using acronyms (use `Documents\MATLAB\AP_histology\allenAtlas\structure_tree_safe_2017.csv` provided here or in AP_histology to find acronyms for any given structure)
-    - Run `calculate_overlap_with_brain_structures` 
-```
-structure_acronyms = {'MOs','MOp','SSp','SSs', 'AUD','VIS','AI','ACA'}; %need to match ABA nomenclature
-calculate_overlap_with_brain_structures(volumes, structure_acronyms, outDir, ExperimentName, alpha, false);
-```
+- adapt colors (either add a plot by Group or Channel option or choose a different "color by" value) and click "Update Preview Plot" to see the volumes on the right.
+- You can calculate overlap between each volume with each other ("Calculate overlap btw Volumes")
+- Or select brain structures to calculate overlap between volumes vs. those brain structures
+- Both options return a CSV file with volume area as well as estimated overlap (voxel based)
 
-   - **Output** : creates a CSV file (`OUT/*_3D_Overlap_Results_VolumestoBrainStructures.csv`) with % of overlap of each volume to given ABA structure (overlap_fraction_original)
+- "Save Plot" saves the currently displayed plot to a file
+For additional splitting and coloring options, check the "Batch processing" options.
+
 
 ### Summary Output
 The script will generate the following:
