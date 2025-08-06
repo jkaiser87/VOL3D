@@ -919,7 +919,7 @@ end
 
         for i = 1:numel(tiffFiles)
             tifname = tiffFiles(i).name;
-            csvname = fullfile(csvDir, sprintf('%s_%s.csv', chan, erase(tifname, '.tif')));
+            csvname = fullfile(csvDir, sprintf('%s_%s', chan, strrep(tifname, '.tif', '.csv')));
 
             if isfile(csvname)
                 tab = readtable(csvname);
