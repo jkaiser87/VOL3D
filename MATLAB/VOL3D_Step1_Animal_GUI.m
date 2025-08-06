@@ -1190,6 +1190,13 @@ end
     set(ax, 'ZDir', 'reverse');
     view(ax, az, el);
     hold(ax, 'off');
+
+    
+    % Enable realistic lighting
+    lighting(ax, 'gouraud');         % Smooth lighting (or try 'phong' for shinier surface)
+    material(ax, 'dull');            % 'dull', 'shiny', or 'metal' affect reflectivity
+    camlight(ax, 'headlight');       % Attach light to camera
+
 end
 
 function smoothedVertices = laplacianSmooth(vertices, faces, lambda, iterations)
