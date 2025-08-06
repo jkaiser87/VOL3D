@@ -2,7 +2,6 @@
 % GUI for processing and visualizing 3D injection volumes from FIJI into CCF space
 % Julia Kaiser, April 2025
 
-
 %add button to calculate overlap with brain structures 
 %add help function
 % add check for dependencies
@@ -65,8 +64,8 @@ handles.headerPanel = uipanel(handles.uiLeft, 'Title', '', ...
     'HighlightColor', handles.colors.cerulean, ...  % Border highlight color when needed
     'ForegroundColor', handles.colors.white);  % Changed from 'white' to colors.white for consistency
 
-handles.headerLayout = uigridlayout(handles.headerPanel, [1 3]);
-handles.headerLayout.ColumnWidth = {'1x', 'fit', 'fit'};
+handles.headerLayout = uigridlayout(handles.headerPanel, [1 4]);
+handles.headerLayout.ColumnWidth = {'1x', 'fit', 'fit', 'fit'   };
 handles.headerLayout.Padding = [10 5 10 5];
 handles.headerLayout.BackgroundColor = handles.colors.charcoal; % Ensure full coverage
 
@@ -77,15 +76,21 @@ uilabel(handles.headerLayout, 'Text', 'VOL3D Step 1 - Animal', ...
     'FontColor', handles.colors.white, ...  % Explicitly set font color
     'BackgroundColor', handles.colors.charcoal); % Match panel background
 
+
+% Reload button
+handles.reloadButton = uibutton(handles.headerLayout, 'Text', '🔄 Reload GUI');
+handles.reloadButton.Layout.Row = 1;
+handles.reloadButton.Layout.Column = 2;
+
 % Change folder
 handles.browseButton = uibutton(handles.headerLayout, 'Text', '📁 Change Folder');
 handles.browseButton.Layout.Row = 1;
-handles.browseButton.Layout.Column = 2;
+handles.browseButton.Layout.Column = 3;
 
 % Help Button
 handles.btnHelp = uibutton(handles.headerLayout, 'Text', 'Help');
 handles.btnHelp.Layout.Row = 1;
-handles.btnHelp.Layout.Column = 3;
+handles.btnHelp.Layout.Column = 4;
 handles.btnHelp.FontColor = handles.colors.white;  % White text
 handles.btnHelp.BackgroundColor = handles.colors.gunmetal;  % Grey background to stand out
 
@@ -420,6 +425,7 @@ guidata(handles.fig, handles);  % store updated struct
 handles.browseButton.ButtonPushedFcn = @(btn, event) ...
     guidata(btn, browseForFolder(guidata(btn)));
 handles.btnHelp.ButtonPushedFcn = @(btn,event) openHelpDialog();
+handles.reloadButton.ButtonPushedFcn = @(btn, event) guidata(btn, reloadCurrentFolder(guidata(btn)));
 
 handles.atlasTypeDropdown.ValueChangedFcn = @(src,event) guidata(src, validateAtlasSelection(guidata(src)));
 handles.btnAPHistology.ButtonPushedFcn = @(btn, event) guidata(btn, launchAPHistology(guidata(btn)));
@@ -468,6 +474,30 @@ function handles = browseForFolder(handles);
         cd(folder_name); % not critical, but keeps file dialogs consistent
     end
 
+end
+
+function handles = reloadCurrentFolder(handles)
+    folder = handles.baseDir;
+    
+    % Reload all TIFs and status info
+    updateTiffList(folder, handles);
+
+    tifFiles = dir(fullfile(folder, '*.tif'));
+    if isempty(tifFiles)
+        handles.msgLabel.Text = 'No TIF files found in folder. Please choose another one.';
+        handles.msgLabel.FontColor = handles.colors.errorRed;
+    else
+        checkChannelAvailability(handles);
+        handles = updateStatusPanels(handles);
+        handles = LoadInjVol(handles);  % reload volume if already exists
+
+        % Optional: Replot
+        if isfield(handles, 'volume') && ~isempty(handles.volume)
+            updatePlot(handles);
+        end
+    end
+
+    guidata(handles.fig, handles);
 end
 
 
