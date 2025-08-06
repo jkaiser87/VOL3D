@@ -968,8 +968,7 @@ end
 
         % Make smoothed volume
         coord3D = coordCCF(:, [1 3 2]); % reorder to Z, X, Y
-        [k1, f] = boundary(coord3D);
-
+        k1 = convhulln(coord3D);  % Replace boundary()
 
         vSmooth = laplacianSmooth(coord3D, k1, 0.1, 5);
         
