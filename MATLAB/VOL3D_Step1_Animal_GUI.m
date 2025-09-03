@@ -2,13 +2,15 @@
 % GUI for processing and visualizing 3D injection volumes from FIJI into CCF space
 % Julia Kaiser, April 2025
 
-%add button to calculate overlap with brain structures 
-%add help function
-% add check for dependencies
 % animal coloring does not work?
-% assigns hemi wrong?
 
 function VOL3D_Step1_Animal_GUI(baseDir)
+
+% Check dependencies first before proceeding
+if ~checkDependencies()
+    return; % Exit if dependencies are missing
+end
+
 if nargin < 1 || isempty(baseDir)
     handles.baseDir = pwd;
 end
@@ -24,7 +26,7 @@ handles.colors.gunmetal = [0.09 0.15 0.18];   % #16262E
 handles.colors.white = [1 1 1];               % #FFFFFF
 handles.colors.errorRed = [0.8 0.2 0.2];      % For error messages
 handles.colors.warningColor = [1.0 0.8 0.4];           % pastel amber, hex #FFCC66
-handles.colors.successColor = [0.35 0.75 0.45]; 
+handles.colors.successColor = [0.35 0.75 0.45];
 
 % Status colors (adjusted to match your scheme)
 handles.colors.statusPending = [0.62 0.64 0.70];  % Your existing coolGray (#9FA2B2)
@@ -454,50 +456,50 @@ end
 %% GUI setup helper functions
 
 function handles = browseForFolder(handles);
-    folder_name = uigetdir();
-    if folder_name ~= 0
-        handles.baseDir = folder_name;
-        updateTiffList(folder_name, handles);
+folder_name = uigetdir();
+if folder_name ~= 0
+    handles.baseDir = folder_name;
+    updateTiffList(folder_name, handles);
 
-        tifFiles = dir(fullfile(folder_name, '*.tif'));
-        if isempty(tifFiles)
-            handles.msgLabel.Text = 'No TIF files found in folder. Please choose another one.';
-            handles.msgLabel.FontColor = handles.colors.errorRed;
-        else
-            handles = LoadInjVol(handles); % <- reloads CCF if present
-            checkChannelAvailability(handles);
-            handles = updateStatusPanels(handles); % <- calls updatePlotControlsAvailability
-            updatePlot(handles); % <- optional, plot automatically
-        end
-
-        guidata(handles.fig, handles);  % <- Save updated handles!
-        cd(folder_name); % not critical, but keeps file dialogs consistent
-    end
-
-end
-
-function handles = reloadCurrentFolder(handles)
-    folder = handles.baseDir;
-    
-    % Reload all TIFs and status info
-    updateTiffList(folder, handles);
-
-    tifFiles = dir(fullfile(folder, '*.tif'));
+    tifFiles = dir(fullfile(folder_name, '*.tif'));
     if isempty(tifFiles)
         handles.msgLabel.Text = 'No TIF files found in folder. Please choose another one.';
         handles.msgLabel.FontColor = handles.colors.errorRed;
     else
+        handles = LoadInjVol(handles); % <- reloads CCF if present
         checkChannelAvailability(handles);
-        handles = updateStatusPanels(handles);
-        handles = LoadInjVol(handles);  % reload volume if already exists
-
-        % Optional: Replot
-        if isfield(handles, 'volume') && ~isempty(handles.volume)
-            updatePlot(handles);
-        end
+        handles = updateStatusPanels(handles); % <- calls updatePlotControlsAvailability
+        updatePlot(handles); % <- optional, plot automatically
     end
 
-    guidata(handles.fig, handles);
+    guidata(handles.fig, handles);  % <- Save updated handles!
+    cd(folder_name); % not critical, but keeps file dialogs consistent
+end
+
+end
+
+function handles = reloadCurrentFolder(handles)
+folder = handles.baseDir;
+
+% Reload all TIFs and status info
+updateTiffList(folder, handles);
+
+tifFiles = dir(fullfile(folder, '*.tif'));
+if isempty(tifFiles)
+    handles.msgLabel.Text = 'No TIF files found in folder. Please choose another one.';
+    handles.msgLabel.FontColor = handles.colors.errorRed;
+else
+    checkChannelAvailability(handles);
+    handles = updateStatusPanels(handles);
+    handles = LoadInjVol(handles);  % reload volume if already exists
+
+    % Optional: Replot
+    if isfield(handles, 'volume') && ~isempty(handles.volume)
+        updatePlot(handles);
+    end
+end
+
+guidata(handles.fig, handles);
 end
 
 
@@ -575,186 +577,186 @@ end
 load(atlas_settings_path, 'templates');
 
 % Extract and return all available atlas types
- atlasTypes = ['-- SELECT ATLAS --'; fieldnames(templates)];
+atlasTypes = ['-- SELECT ATLAS --'; fieldnames(templates)];
 end
 
 
 
 function handles = updateStatusPanels(handles)
-    status = checkProcessingSteps(handles.baseDir);
+status = checkProcessingSteps(handles.baseDir);
 
-    % Match status field names to order in GUI
-    keys = {'fiji', 'aphist', 'vol3d'};
-    for i = 1:numel(keys)
-        key = keys{i};
-        val = status.(key);
-        label = handles.statusLabels(i);
+% Match status field names to order in GUI
+keys = {'fiji', 'aphist', 'vol3d'};
+for i = 1:numel(keys)
+    key = keys{i};
+    val = status.(key);
+    label = handles.statusLabels(i);
 
-        % General handler for enriched status information
-        if val == "available"
-            % Get additional context information if available
-            extraInfoFields = setdiff(fieldnames(status), keys);
-            matchedExtras = startsWith(extraInfoFields, key);
-            infoToShow = '';
-            
-            for ef = extraInfoFields(matchedExtras)'
-                valExtra = status.(ef{1});
-                if iscell(valExtra)
-                    infoToShow = strjoin(valExtra, ' | ');
-                elseif isstring(valExtra) || ischar(valExtra)
-                    infoToShow = valExtra;
-                end
+    % General handler for enriched status information
+    if val == "available"
+        % Get additional context information if available
+        extraInfoFields = setdiff(fieldnames(status), keys);
+        matchedExtras = startsWith(extraInfoFields, key);
+        infoToShow = '';
+
+        for ef = extraInfoFields(matchedExtras)'
+            valExtra = status.(ef{1});
+            if iscell(valExtra)
+                infoToShow = strjoin(valExtra, ' | ');
+            elseif isstring(valExtra) || ischar(valExtra)
+                infoToShow = valExtra;
             end
-
-            % Set label text and styling
-            if ~isempty(infoToShow)
-                label.Text = ['Done (', infoToShow, ')'];
-            else
-                label.Text = 'Done';
-            end
-            label.BackgroundColor = handles.colors.statusSuccess;
-            label.FontColor = handles.colors.statusTextLight;
-
-        elseif val == "in_progress"
-            label.Text = 'In Process';
-            label.BackgroundColor = handles.colors.statusWarning;
-            label.FontColor = handles.colors.statusTextDark;
-
-        elseif val == "not_started"
-            label.Text = 'Not Started';
-            label.BackgroundColor = handles.colors.statusNotDone;
-            label.FontColor = handles.colors.statusTextDark;
-
-        else % "not_available"
-            label.Text = 'Not Available';
-            label.BackgroundColor = handles.colors.statusError;
-            label.FontColor = handles.colors.statusTextLight;
         end
-    end
 
-    updatePlotControlsAvailability(handles, status);
-    
-    % Update color dropdown if CCF data exists
-    if strcmp(status.vol3d, "available") && isfield(handles, 'volume')
-        handles = updateColorDropdown(handles);
-        guidata(handles.fig, handles); % Save the updated handles
+        % Set label text and styling
+        if ~isempty(infoToShow)
+            label.Text = ['Done (', infoToShow, ')'];
+        else
+            label.Text = 'Done';
+        end
+        label.BackgroundColor = handles.colors.statusSuccess;
+        label.FontColor = handles.colors.statusTextLight;
+
+    elseif val == "in_progress"
+        label.Text = 'In Process';
+        label.BackgroundColor = handles.colors.statusWarning;
+        label.FontColor = handles.colors.statusTextDark;
+
+    elseif val == "not_started"
+        label.Text = 'Not Started';
+        label.BackgroundColor = handles.colors.statusNotDone;
+        label.FontColor = handles.colors.statusTextDark;
+
+    else % "not_available"
+        label.Text = 'Not Available';
+        label.BackgroundColor = handles.colors.statusError;
+        label.FontColor = handles.colors.statusTextLight;
     end
+end
+
+updatePlotControlsAvailability(handles, status);
+
+% Update color dropdown if CCF data exists
+if strcmp(status.vol3d, "available") && isfield(handles, 'volume')
+    handles = updateColorDropdown(handles);
+    guidata(handles.fig, handles); % Save the updated handles
+end
 end
 
 function status = checkProcessingSteps(baseDir)
-    status = struct();
+status = struct();
 
-    % --- 0. Check for base TIF files ---
-    tifFiles = dir(fullfile(baseDir, '*.tif'));
-    status.tifs = "not_available";
-    if ~isempty(tifFiles)
-        status.tifs = "available";
-    end
+% --- 0. Check for base TIF files ---
+tifFiles = dir(fullfile(baseDir, '*.tif'));
+status.tifs = "not_available";
+if ~isempty(tifFiles)
+    status.tifs = "available";
+end
 
-    % --- 1. FIJI Coordinates ---
-    csvDir = fullfile(baseDir, 'VOL\CSV');
-    status.fiji = "not_available"; % default
-    
-    if isfolder(csvDir)
-        processedChannels = {};
-        for c = 1:4
-            pattern = sprintf('C%d_*.csv', c);
-            if ~isempty(dir(fullfile(csvDir, pattern)))
-                processedChannels{end+1} = sprintf('C%d', c);
-            end
-        end
-        
-        if ~isempty(processedChannels)
-            status.fiji = "available";
-            status.fiji_channels = processedChannels;
-        else
-            status.fiji = "not_started"; % CSV folder exists but no files
+% --- 1. FIJI Coordinates ---
+csvDir = fullfile(baseDir, 'VOL\CSV');
+status.fiji = "not_available"; % default
+
+if isfolder(csvDir)
+    processedChannels = {};
+    for c = 1:4
+        pattern = sprintf('C%d_*.csv', c);
+        if ~isempty(dir(fullfile(csvDir, pattern)))
+            processedChannels{end+1} = sprintf('C%d', c);
         end
     end
 
-    % --- 2. AP Histology ---
-    outDir = fullfile(baseDir, 'OUT');
-    status.aphist = "not_available"; % default
-    
-    % Check if AP histology is installed (basic check)
-    if ~exist('AP_histology', 'file')
-        status.aphist = "not_available";
-    elseif isfolder(outDir)
-        histologyFiles = dir(fullfile(outDir, 'atlas2histology_*tform.mat'));
-        intermediateTifs = dir(fullfile(outDir, 'slice_*.tif'));
-        
-        if ~isempty(histologyFiles)
-            status.aphist = "available";
-            atlasTypes = {};
-            
-            for f = 1:length(histologyFiles)
-                tokens = regexp(histologyFiles(f).name, 'atlas2histology_([^_]+)?tform\.mat', 'tokens');
-                if ~isempty(tokens)
-                    match = tokens{1}{1};
-                    if isempty(match)
-                        atlasTypes{end+1} = 'adult';
-                    else
-                        atlasTypes{end+1} = match;
-                    end
-                end
-            end
-            
-            if ~isempty(atlasTypes)
-                status.aphist_atlas = strjoin(unique(atlasTypes), ' | ');
-            end
-            
-        elseif ~isempty(intermediateTifs)
-            status.aphist = "in_progress";
-        elseif status.tifs == "available"
-            status.aphist = "not_started"; % TIFs exist but no processing started
-        end
-    elseif status.tifs == "available"
-        status.aphist = "not_started"; % TIFs exist but OUT folder doesn't
-    end
-
-  
-    % --- 4. vol3d Coordinates ---
-    [~, name] = fileparts(baseDir);
-    ccfDir = fullfile(baseDir, 'OUT', 'CCF');
-    status.vol3d = "not_available"; % default
-    
-    % Check if AP histology is complete first
-    if strcmp(status.aphist, "available")
-        if isfolder(ccfDir)
-            coordFiles = dir(fullfile(ccfDir, [name, '_volume*.mat']));
-            if ~isempty(coordFiles)
-                status.vol3d = "available";
-                % Extract atlas type
-                tokens = regexp(coordFiles(1).name, '_volume(.*)\.mat', 'tokens');
-                if ~isempty(tokens)
-                    status.vol3d_atlas = tokens{1}{1};
-                end
-            else
-                status.vol3d = "not_started"; % CCF folder exists but no files
-            end
-        else
-            status.vol3d = "not_started"; % AP hist done but no CCF folder
-        end
+    if ~isempty(processedChannels)
+        status.fiji = "available";
+        status.fiji_channels = processedChannels;
+    else
+        status.fiji = "not_started"; % CSV folder exists but no files
     end
 end
 
-function handles = validateAtlasSelection(handles)
-    % Check if a valid atlas is selected (not the placeholder)
-    selectedAtlas = handles.atlasTypeDropdown.Value;
-    handles.atlasValid = ~strcmp(selectedAtlas, '-- SELECT ATLAS --');
-    
-    % Update button states
-    status = checkProcessingSteps(handles.baseDir);
-    updatePlotControlsAvailability(handles, status);
-    
-    % Update status message
-    if handles.atlasValid
-        handles.msgLabel.Text = ['Selected atlas: ' selectedAtlas];
-        handles.msgLabel.FontColor = handles.colors.charcoal;
-    else
-        handles.msgLabel.Text = 'Please select a valid atlas type before proceeding.';
-        handles.msgLabel.FontColor = handles.colors.warningColor;
+% --- 2. AP Histology ---
+outDir = fullfile(baseDir, 'OUT');
+status.aphist = "not_available"; % default
+
+% Check if AP histology is installed (basic check)
+if ~exist('AP_histology', 'file')
+    status.aphist = "not_available";
+elseif isfolder(outDir)
+    histologyFiles = dir(fullfile(outDir, 'atlas2histology_*tform.mat'));
+    intermediateTifs = dir(fullfile(outDir, 'slice_*.tif'));
+
+    if ~isempty(histologyFiles)
+        status.aphist = "available";
+        atlasTypes = {};
+
+        for f = 1:length(histologyFiles)
+            tokens = regexp(histologyFiles(f).name, 'atlas2histology_([^_]+)?tform\.mat', 'tokens');
+            if ~isempty(tokens)
+                match = tokens{1}{1};
+                if isempty(match)
+                    atlasTypes{end+1} = 'adult';
+                else
+                    atlasTypes{end+1} = match;
+                end
+            end
+        end
+
+        if ~isempty(atlasTypes)
+            status.aphist_atlas = strjoin(unique(atlasTypes), ' | ');
+        end
+
+    elseif ~isempty(intermediateTifs)
+        status.aphist = "in_progress";
+    elseif status.tifs == "available"
+        status.aphist = "not_started"; % TIFs exist but no processing started
     end
+elseif status.tifs == "available"
+    status.aphist = "not_started"; % TIFs exist but OUT folder doesn't
+end
+
+
+% --- 4. vol3d Coordinates ---
+[~, name] = fileparts(baseDir);
+ccfDir = fullfile(baseDir, 'OUT', 'CCF');
+status.vol3d = "not_available"; % default
+
+% Check if AP histology is complete first
+if strcmp(status.aphist, "available")
+    if isfolder(ccfDir)
+        coordFiles = dir(fullfile(ccfDir, [name, '_volume*.mat']));
+        if ~isempty(coordFiles)
+            status.vol3d = "available";
+            % Extract atlas type
+            tokens = regexp(coordFiles(1).name, '_volume(.*)\.mat', 'tokens');
+            if ~isempty(tokens)
+                status.vol3d_atlas = tokens{1}{1};
+            end
+        else
+            status.vol3d = "not_started"; % CCF folder exists but no files
+        end
+    else
+        status.vol3d = "not_started"; % AP hist done but no CCF folder
+    end
+end
+end
+
+function handles = validateAtlasSelection(handles)
+% Check if a valid atlas is selected (not the placeholder)
+selectedAtlas = handles.atlasTypeDropdown.Value;
+handles.atlasValid = ~strcmp(selectedAtlas, '-- SELECT ATLAS --');
+
+% Update button states
+status = checkProcessingSteps(handles.baseDir);
+updatePlotControlsAvailability(handles, status);
+
+% Update status message
+if handles.atlasValid
+    handles.msgLabel.Text = ['Selected atlas: ' selectedAtlas];
+    handles.msgLabel.FontColor = handles.colors.charcoal;
+else
+    handles.msgLabel.Text = 'Please select a valid atlas type before proceeding.';
+    handles.msgLabel.FontColor = handles.colors.warningColor;
+end
 end
 
 
@@ -776,7 +778,7 @@ if isempty(ccfFiles), return; end
 
 try
     loaded = load(fullfile(ccfDir, ccfFiles(1).name));
-    
+
     % Load injection volume
     if isfield(loaded, 'volume')
         handles.volume = loaded.volume;
@@ -792,7 +794,7 @@ try
             handles.groupEditField.Value = loaded.Group;
         end
     end
-    
+
     % Set atlas if stored
     if isfield(loaded, 'atlasType')
         handles.atlasType = loaded.atlasType;
@@ -803,7 +805,7 @@ try
     end
 
     % Update dropdowns and button availability
-    handles = updateColorDropdown(handles);   
+    handles = updateColorDropdown(handles);
     updatePlotControlsAvailability(handles, checkProcessingSteps(handles.baseDir));
 
 catch ME
@@ -826,32 +828,32 @@ end
 
 
 function updatePlotControlsAvailability(handles, status)
-    % Enable plot-related controls if CCF coords exist
-    hasCCF = strcmp(status.vol3d, "available");
+% Enable plot-related controls if CCF coords exist
+hasCCF = strcmp(status.vol3d, "available");
 
-    % List of controls that depend on CCF data
-    ccfControls = {handles.colorDropdown, handles.btnUpdatePlot, ...
-                   handles.btnSavePreview, handles.btnCustomPalette, ...
-                   handles.btnSaveAdditional, handles.flipDropdown};
-    
-    for i = 1:numel(ccfControls)
-        if isvalid(ccfControls{i})
-            ccfControls{i}.Enable = bool2onoff(hasCCF);
-        end
+% List of controls that depend on CCF data
+ccfControls = {handles.colorDropdown, handles.btnUpdatePlot, ...
+    handles.btnSavePreview, handles.btnCustomPalette, ...
+    handles.btnSaveAdditional, handles.flipDropdown};
+
+for i = 1:numel(ccfControls)
+    if isvalid(ccfControls{i})
+        ccfControls{i}.Enable = bool2onoff(hasCCF);
     end
+end
 
 
-     % AP_histology requires TIFs AND valid atlas selection
-    if isfield(handles, 'btnAPHistology') && isvalid(handles.btnAPHistology)
-        handles.btnAPHistology.Enable = bool2onoff(...
-            strcmp(status.tifs, "available") && handles.atlasValid);
-    end
+% AP_histology requires TIFs AND valid atlas selection
+if isfield(handles, 'btnAPHistology') && isvalid(handles.btnAPHistology)
+    handles.btnAPHistology.Enable = bool2onoff(...
+        strcmp(status.tifs, "available") && handles.atlasValid);
+end
 
-    % Run button requires AP_histology completion AND valid atlas
-    if isfield(handles, 'btnRun') && isvalid(handles.btnRun)
-        handles.btnRun.Enable = bool2onoff(...
-            strcmp(status.aphist, "available") && handles.atlasValid);
-    end
+% Run button requires AP_histology completion AND valid atlas
+if isfield(handles, 'btnRun') && isvalid(handles.btnRun)
+    handles.btnRun.Enable = bool2onoff(...
+        strcmp(status.aphist, "available") && handles.atlasValid);
+end
 end
 
 function val = bool2onoff(flag)
@@ -862,16 +864,15 @@ end
 end
 
 %% Processing steps
-
 % ------ AP Histology launch
 %does not update status about process while open
 function handles = launchAPHistology(handles)
 % Check if atlas is valid
-    if ~handles.atlasValid
-        handles.msgLabel.Text = 'Please select a valid atlas type before running AP_histology.';
-        handles.msgLabel.FontColor = handles.colors.errorRed;
-        return;
-    end
+if ~handles.atlasValid
+    handles.msgLabel.Text = 'Please select a valid atlas type before running AP_histology.';
+    handles.msgLabel.FontColor = handles.colors.errorRed;
+    return;
+end
 handles.msgLabel.Text = sprintf([ ...
     'Loading AP_histology GUI for atlas type "%s"...\n', ...
     'Run through all steps including manual alignment of histology to atlas.\n', ...
@@ -883,24 +884,25 @@ drawnow;  % update label before running
 AP_histology(handles.atlasTypeDropdown.Value);
 guidata(handles.fig, handles);
 end
+%%
 
 function runVOL3DTransformation(handles, selectedChannels)
 
-    % Update status
-    handles.msgLabel.Text = '⏳ Running VOL3D transformation...';
-    atlasType = handles.atlasTypeDropdown.Value;
-    drawnow;
+% Update status
+handles.msgLabel.Text = '⏳ Running VOL3D transformation...';
+atlasType = handles.atlasTypeDropdown.Value;
+drawnow;
 
-    % Setup
-    folder = handles.baseDir;
-    csvDir = fullfile(folder, 'VOL', 'CSV');
-    tiffFiles = dir(fullfile(folder, '*.tif'));
+% Setup
+folder = handles.baseDir;
+csvDir = fullfile(folder, 'VOL', 'CSV');
+tiffFiles = dir(fullfile(folder, '*.tif'));
 
-    if isempty(tiffFiles)
-        handles.msgLabel.Text = '⚠️ No TIF files found in folder.';
-        handles.msgLabel.FontColor = handles.colors.errorRed;
-        return;
-    end
+if isempty(tiffFiles)
+    handles.msgLabel.Text = '⚠️ No TIF files found in folder.';
+    handles.msgLabel.FontColor = handles.colors.errorRed;
+    return;
+end
 
 % Parse channel names from text field
 rawText = strjoin(handles.channelNameField.Value, ' '); % Combine lines into one string
@@ -917,148 +919,352 @@ else
 
     % Validate name count
     if numel(rawNames) ~= numel(selectedChannels)
-            handles.msgLabel.Text = sprintf('The number of channel names (%d) does not match the number of selected channels (%d).\n\n Please separate names with commas or semicolons and ensure the count matches.', numel(rawNames), numel(selectedChannels));
-            handles.msgLabel.FontColor = handles.colors.errorRed;
+        handles.msgLabel.Text = sprintf('The number of channel names (%d) does not match the number of selected channels (%d).\n\n Please separate names with commas or semicolons and ensure the count matches.', numel(rawNames), numel(selectedChannels));
+        handles.msgLabel.FontColor = handles.colors.errorRed;
         return;
     end
     channelNames = rawNames(1:numel(selectedChannels)); % Use only the needed names
 end
 
-    % Group name
-    Group = handles.groupEditField.Value;
-    Animal = getFolderName(folder);
+% Group name
+Group = handles.groupEditField.Value;
+Animal = getFolderName(folder);
 
-    % Load transformation
-    tformFile = fullfile(folder, 'OUT', 'atlas2histology_tform.mat');
-    histFile = fullfile(folder, 'OUT', 'histology_ccf.mat');
+% Load transformation
+tformFile = fullfile(folder, 'OUT', 'atlas2histology_tform.mat');
+histFile = fullfile(folder, 'OUT', 'histology_ccf.mat');
 
-    if ~isfile(tformFile) || ~isfile(histFile)
-        handles.msgLabel.Text = '❌ Missing AP_histology output. Run AP_histology first.';
-        handles.msgLabel.FontColor = handles.colors.errorRed;
-        return;
+if ~isfile(tformFile) || ~isfile(histFile)
+    handles.msgLabel.Text = '❌ Missing AP_histology output. Run AP_histology first.';
+    handles.msgLabel.FontColor = handles.colors.errorRed;
+    return;
+end
+
+load(tformFile, 'atlas2histology_tform');
+load(histFile, 'histology_ccf');
+
+% Loop through channels and files
+volume = struct;
+for ch = 1:numel(selectedChannels)
+    chan = selectedChannels{ch};
+    coordCCF = [];
+
+    for i = 1:numel(tiffFiles)
+        tifname = tiffFiles(i).name;
+        csvname = fullfile(csvDir, sprintf('%s_%s', chan, strrep(tifname, '.tif', '.csv')));
+
+        if isfile(csvname)
+            tab = readtable(csvname);
+            pts = [tab.X, tab.Y];
+
+            tform = invert(affine2d(atlas2histology_tform{i}));
+            [x, y] = transformPointsForward(tform, pts(:,1), pts(:,2));
+            [M, N] = size(histology_ccf(i).av_slices);
+
+            valid = x > 0 & x <= N & y > 0 & y <= M;
+            idx = sub2ind([M, N], round(y(valid)), round(x(valid)));
+            ccf_xyz = [histology_ccf(i).plane_ap(idx), histology_ccf(i).plane_dv(idx), histology_ccf(i).plane_ml(idx)];
+            coordCCF = [coordCCF; ccf_xyz];
+        end
     end
 
-    load(tformFile, 'atlas2histology_tform');
-    load(histFile, 'histology_ccf');
 
-    % Loop through channels and files
-    volume = struct;
-    for ch = 1:numel(selectedChannels)
-        chan = selectedChannels{ch};
-        coordCCF = [];
+    % === SURFACE GENERATION ===
+    coord3D = coordCCF(:, [1 3 2]); % reorder to Z, X, Y
+    [faces_calc, verts_calc, faces_vis, verts_vis, primary_method, vis_method] = generateSurface(coord3D);
 
-        for i = 1:numel(tiffFiles)
-            tifname = tiffFiles(i).name;
-            csvname = fullfile(csvDir, sprintf('%s_%s', chan, strrep(tifname, '.tif', '.csv')));
+    % --- Hemisphere and summary ---
+    [~, ~, brain_data] = getAtlasFilesForType(atlasType);
 
-            if isfile(csvname)
-                tab = readtable(csvname);
-                pts = [tab.X, tab.Y];
+    midline = mean([min(brain_data.brain.v(:,2)) max(brain_data.brain.v(:,2))]);
 
-                tform = invert(affine2d(atlas2histology_tform{i}));
-                [x, y] = transformPointsForward(tform, pts(:,1), pts(:,2));
-                [M, N] = size(histology_ccf(i).av_slices);
+    hemi = "Unknown";
 
-                valid = x > 0 & x <= N & y > 0 & y <= M;
-                idx = sub2ind([M, N], round(y(valid)), round(x(valid)));
-                ccf_xyz = [histology_ccf(i).plane_ap(idx), histology_ccf(i).plane_dv(idx), histology_ccf(i).plane_ml(idx)];
-                coordCCF = [coordCCF; ccf_xyz];
-            end
-        end
+    % Logical checks
+    hasLeft = any(coord3D(:,2) < midline);
+    hasRight = any(coord3D(:,2) > midline);
 
-        % Make smoothed volume
-        coord3D = coordCCF(:, [1 3 2]); % reorder to Z, X, Y
-        k1 = convhulln(coord3D);  % Replace boundary()
-
-        vSmooth = laplacianSmooth(coord3D, k1, 0.1, 5);
-        
-        % --- Hemisphere and summary ---
-        [~, ~, brain_data] = getAtlasFilesForType(atlasType);
-
-        midline = mean([min(brain_data.brain.v(:,2)) max(brain_data.brain.v(:,2))]);
-  
-        hemi = "Unknown";
-        
-        % Logical checks
-        hasLeft = any(coord3D(:,2) < midline);
-        hasRight = any(coord3D(:,2) > midline);
-        
-        if hasLeft && ~hasRight
-            hemi = "Left";
-        elseif hasRight && ~hasLeft
-            hemi = "Right";
-        elseif hasLeft && hasRight
-            hemi = "Mixed";
-        end
-        
-        palette = getCurrentPalette(handles.baseDir);
-        channelColor = palette(mod(ch-1, size(palette, 1)) + 1, :);  % cycle if more volumes than colors
-        volume(ch).Animal = Animal;
-        volume(ch).channels = chan;
-        volume(ch).ChannelName = channelNames{ch};
-        volume(ch).channelColor = channelColor;
-        volume(ch).smoothedVertices = vSmooth;
-        volume(ch).k1 = k1;
-        volume(ch).ccf_points_cat_ord = coord3D;
-        volume(ch).hemi = hemi;
-
+    if hasLeft && ~hasRight
+        hemi = "Left";
+    elseif hasRight && ~hasLeft
+        hemi = "Right";
+    elseif hasLeft && hasRight
+        hemi = "Mixed";
     end
-   
 
-    % --- Save output ---
-    savePath = fullfile(folder, 'OUT', 'CCF');
-    if ~exist(savePath, 'dir'), mkdir(savePath); end
-    save(fullfile(savePath, [getFolderName(folder), '_volume.mat']), 'volume','atlasType','Group','Animal');
-    handles.msgLabel.Text = '✅ VOL3D transformaftion completed and saved.';
-    handles.msgLabel.FontColor = handles.colors.statusSuccess;
+    % === STORE RESULTS INTO VOLUME STRUCT ===
+    palette = getCurrentPalette(handles.baseDir);
+    channelColor = palette(mod(ch-1, size(palette, 1)) + 1, :);
 
-    handles = LoadInjVol(handles);                      % Load the volume data into handles
-    handles = updateStatusPanels(handles);              % Refresh the status grid visually
-    guidata(handles.fig, handles);                      % Save updates to GUI
-    updatePlot(handles);                                % Optionally re-plot immediately
+    volume(ch).Animal              = Animal;
+    volume(ch).channels            = chan;
+    volume(ch).ChannelName         = channelNames{ch};
+    volume(ch).channelColor        = channelColor;
+    volume(ch).hemi                = hemi;
+    volume(ch).ccf_points_cat_ord  = coord3D;       % Original coordinate data
 
+    % Calculation surfaces
+    volume(ch).k1                  = faces_calc;   % Face connectivity (accurate)
+    volume(ch).verts               = verts_calc;   % Vertices (anatomically correct)
+    volume(ch).surface_method      = primary_method;
+
+    % % Visualization surfaces
+    volume(ch).k1_vis              = faces_vis;    % Face connectivity (smooth/pretty)
+    volume(ch).verts_vis= verts_vis;    % Vertices (pretty)
+    volume(ch).vis_method          = vis_method;
 
 end
 
+
+% --- Save output ---
+savePath = fullfile(folder, 'OUT', 'CCF');
+if ~exist(savePath, 'dir'), mkdir(savePath); end
+save(fullfile(savePath, [getFolderName(folder), '_volume.mat']), 'volume','atlasType','Group','Animal');
+
+handles.msgLabel.Text = '✅ VOL3D transformaftion completed and saved.';
+handles.msgLabel.FontColor = handles.colors.statusSuccess;
+
+handles = LoadInjVol(handles);                      % Load the volume data into handles
+handles = updateStatusPanels(handles);              % Refresh the status grid visually
+guidata(handles.fig, handles);                      % Save updates to GUI
+updatePlot(handles);                                % Optionally re-plot immediately
+
+end
+
+
+function [faces_calc, verts_calc, faces_vis, verts_vis, primary_method, vis_method] = generateSurface(coord3D)
+
+faces_calc = [];
+verts_calc = [];
+faces_vis = [];
+verts_vis = [];
+primary_method = '';
+vis_method = '';
+
+if size(coord3D,1) < 4
+    fprintf('  Warning: Too few points (%d) for surface generation\n', size(coord3D,1));
+    primary_method = 'too_few_points';
+    vis_method     = 'too_few_points';
+    return;
+end
+
+try
+    % --- 1. Loft (preferred) ---
+    [faces_calc, verts_calc] = loftSlices(coord3D, 50);
+    % Flip faces for correct orientation
+    faces_calc = fliplr(faces_calc);
+    % Prune unused verts and reindex faces
+    [faces_calc, verts_calc] = pruneUnusedVerts(faces_calc, verts_calc);
+    primary_method = 'loft';
+
+    % Visualization: optional alphaShape for smooth appearance
+    try
+        data_scale = max(range(coord3D));
+        alpha_vis  = data_scale * 0.5;
+        shp_vis    = alphaShape(coord3D, alpha_vis);
+        shp_vis.HoleThreshold = inf;
+        [faces_vis, verts_vis] = boundaryFacets(shp_vis);
+        faces_vis = fliplr(faces_vis);
+        [faces_vis, verts_vis] = pruneUnusedVerts(faces_vis, verts_vis);
+        vis_method = 'alpha_smooth';
+    catch
+        faces_vis = faces_calc;
+        verts_vis = verts_calc;
+        vis_method = 'same_as_loft';
+    end
+    
+    % Check closedness and warn
+    if ~isMeshClosed(faces_calc)
+        warning('Generated loft surface mesh is not closed.');
+    end
+
+catch
+    try
+        % --- 2. AlphaShape (fallback) ---
+        shp = alphaShape(coord3D, max(range(coord3D))*0.3);
+        shp.HoleThreshold = inf;
+        [faces_calc, verts_calc] = boundaryFacets(shp);
+        faces_calc = fliplr(faces_calc);
+        [faces_calc, verts_calc] = pruneUnusedVerts(faces_calc, verts_calc);
+        faces_vis = faces_calc;
+        verts_vis = verts_calc;
+        primary_method = 'alpha';
+        vis_method     = 'alpha';
+
+        if ~isMeshClosed(faces_calc)
+            warning('Generated alphaShape surface mesh is not closed.');
+        end
+
+    catch
+        try
+            % --- 3. Convex Hull (last resort) ---
+            faces_calc = convhull(coord3D);
+            verts_calc = coord3D;
+            faces_vis  = faces_calc;
+            verts_vis  = verts_calc;
+            primary_method = 'convex_hull';
+            vis_method     = 'convex_hull';
+
+            if ~isMeshClosed(faces_calc)
+                warning('Convex hull surface mesh is not closed.');
+            end
+
+        catch
+            % --- 4. Failure ---
+            faces_calc = [];
+            verts_calc = [];
+            faces_vis  = [];
+            verts_vis  = [];
+            primary_method = 'failed';
+            vis_method     = 'failed';
+        end
+    end
+end
+
+end
+
+% --- Supporting functions used ---
+
+function [newFaces, newVerts] = pruneUnusedVerts(faces, verts)
+% Keep only vertices used by faces, reindex faces accordingly.
+    usedVerts = unique(faces(:));
+    [~, ~, newIndices] = unique(faces(:));
+    newVerts = verts(usedVerts, :);
+    newFaces = reshape(newIndices, size(faces));
+end
+
+function closed = isMeshClosed(faces)
+% Return true if mesh is closed (each edge referenced twice)
+    edges = [faces(:,[1 2]); faces(:,[2 3]); faces(:,[3 1])];
+    edgesSorted = sort(edges, 2);
+    [~, ~, ic] = unique(edgesSorted, 'rows');
+    counts = histcounts(ic, 1:max(ic)+1);
+    closed = all(counts == 2);
+end
+
+
+function [faces, vertices] = loftSlices(coord3D, nSamples)
+% loftSlices - Build a watertight surface mesh from slice contours
+%
+%   [faces, vertices] = loftSlices(coord3D, nSamples)
+%
+% Inputs:
+%   coord3D   - Nx3 array of [Z,X,Y] points (slice annotations).
+%               Each unique Z value is treated as a slice.
+%   nSamples  - number of vertices per contour after resampling (default=50)
+%
+% Outputs:
+%   faces     - Mx3 array of triangular face indices
+%   vertices  - Px3 array of vertex coordinates [Z,X,Y]
+%
+% Notes:
+%   - Ensures watertight mesh by lofting between successive slices.
+%   - Caps top & bottom with triangulated faces.
+%   - Suitable for inpolyhedron() and patch().
+
+if nargin < 2
+    nSamples = 50;
+end
+
+zs = unique(coord3D(:,1));
+contours = cell(numel(zs),1);
+
+% --- Step 1: Extract ordered boundary for each slice ---
+for i = 1:numel(zs)
+    slicePts = coord3D(coord3D(:,1) == zs(i), 2:3); % X,Y
+    if size(slicePts,1) < 3
+        continue; % skip degenerate slices
+    end
+    k = boundary(slicePts,0.8); % shrink factor <1 keeps concavity
+    contour = [repmat(zs(i),numel(k),1), slicePts(k,:)]; % [Z,X,Y]
+    contours{i} = resampleContour(contour, nSamples);
+end
+
+% --- Step 2: Loft between adjacent contours ---
+vertices = [];
+faces = [];
+for i = 1:numel(contours)-1
+    if isempty(contours{i}) || isempty(contours{i+1}), continue; end
+    c1 = contours{i};
+    c2 = contours{i+1};
+
+    idx1 = size(vertices,1) + (1:nSamples);
+    idx2 = size(vertices,1) + nSamples + (1:nSamples);
+    vertices = [vertices; c1; c2];
+
+    % Connect slice contours
+    for j = 1:nSamples
+        jp = mod(j,nSamples)+1; % wrap around
+        faces(end+1,:) = [idx1(j), idx2(j), idx2(jp)]; %#ok<AGROW>
+        faces(end+1,:) = [idx1(j), idx2(jp), idx1(jp)]; %#ok<AGROW>
+    end
+end
+
+% --- Step 3: Cap top & bottom ---
+firstIdx = 1:nSamples;
+lastIdx = size(vertices,1)-nSamples+1 : size(vertices,1);
+
+[kf,~] = convhull(vertices(firstIdx,2),vertices(firstIdx,3));
+faces = [faces; firstIdx(kf)]; %#ok<AGROW>
+
+[kf,~] = convhull(vertices(lastIdx,2),vertices(lastIdx,3));
+faces = [faces; lastIdx(kf)]; %#ok<AGROW>
+end
+
+
+function newPts = resampleContour(contour, n)
+% Resample a closed [Z,X,Y] contour to exactly n points
+perim = [contour; contour(1,:)]; % close loop
+d = sqrt(sum(diff(perim(:,2:3)).^2,2));
+cumd = [0;cumsum(d)];
+total = cumd(end);
+s = linspace(0,total,n+1)'; s(end)=[];
+newXY = interp1(cumd, perim(:,2:3), s, 'linear');
+newPts = [repmat(contour(1,1),n,1), newXY];
+end
+
+
+
+%%
 function name = getFolderName(path)
-    [~, name] = fileparts(path);
+[~, name] = fileparts(path);
 end
 
 function handles = saveCCFToAdditionalFolder(handles)
-    % Check if CCF file exists in the expected location
-    ccfDir = fullfile(handles.baseDir, 'OUT', 'CCF');
-    ccfFiles = dir(fullfile(ccfDir, '*volume*.mat'));
-    
-    if isempty(ccfFiles)
-        handles.msgLabel.Text = 'Error: No CCF coordinate file found in OUT/CCF folder';
-        handles.msgLabel.FontColor = handles.colors.errorRed;
-        return;
-    end
-    
-    % Get the most recent CCF file if multiple exist
-    [~, idx] = max([ccfFiles.datenum]);
-    sourceFile = fullfile(ccfDir, ccfFiles(idx).name);
-    
-    % Ask user where to save the file
-    targetDir = uigetdir(handles.baseDir, 'Select Folder to Save CCF File');
-    if isequal(targetDir, 0)
-        return; % User canceled
-    end
-    
-    % Copy the file
-    try
-        destinationFile = fullfile(targetDir, ccfFiles(idx).name);
-        copyfile(sourceFile, destinationFile);
-        
-        handles.msgLabel.Text = sprintf('Volume file successfully copied to:\n%s', ...
-                                      destinationFile);
-        handles.msgLabel.FontColor = handles.colors.successColor;
-    catch ME
-        handles.msgLabel.Text = sprintf('Error: File could not be copied\n%s', ME.message);
-        handles.msgLabel.FontColor = handles.colors.errorRed;
-    end
-    
-    guidata(handles.fig, handles);
+% Check if CCF file exists in the expected location
+ccfDir = fullfile(handles.baseDir, 'OUT', 'CCF');
+ccfFiles = dir(fullfile(ccfDir, '*volume*.mat'));
+
+if isempty(ccfFiles)
+    handles.msgLabel.Text = 'Error: No CCF coordinate file found in OUT/CCF folder';
+    handles.msgLabel.FontColor = handles.colors.errorRed;
+    return;
+end
+
+% Get the most recent CCF file if multiple exist
+[~, idx] = max([ccfFiles.datenum]);
+sourceFile = fullfile(ccfDir, ccfFiles(idx).name);
+
+% Ask user where to save the file
+targetDir = uigetdir(handles.baseDir, 'Select Folder to Save CCF File');
+if isequal(targetDir, 0)
+    return; % User canceled
+end
+
+% Copy the file
+try
+    destinationFile = fullfile(targetDir, ccfFiles(idx).name);
+    copyfile(sourceFile, destinationFile);
+
+    handles.msgLabel.Text = sprintf('Volume file successfully copied to:\n%s', ...
+        destinationFile);
+    handles.msgLabel.FontColor = handles.colors.successColor;
+catch ME
+    handles.msgLabel.Text = sprintf('Error: File could not be copied\n%s', ME.message);
+    handles.msgLabel.FontColor = handles.colors.errorRed;
+end
+
+guidata(handles.fig, handles);
 end
 
 
@@ -1066,18 +1272,18 @@ end
 %% plotting
 
 function handles = updatePlot(handles)
- % Debug: Check what's actually in handles
-   if ~isfield(handles, 'volume') || isempty(handles.volume)
-        handles = LoadInjVol(handles); % Attempt to reload
-        guidata(handles.fig, handles); % Save updates
+% Debug: Check what's actually in handles
+if ~isfield(handles, 'volume') || isempty(handles.volume)
+    handles = LoadInjVol(handles); % Attempt to reload
+    guidata(handles.fig, handles); % Save updates
 
-   % Check if loading succeeded
-        if ~isfield(handles, 'volume') || isempty(handles.volume)
-            handles.msgLabel.Text = 'No volume data available for plotting.';
-            handles.msgLabel.FontColor = handles.colors.errorRed;
-            return;
-        end
+    % Check if loading succeeded
+    if ~isfield(handles, 'volume') || isempty(handles.volume)
+        handles.msgLabel.Text = 'No volume data available for plotting.';
+        handles.msgLabel.FontColor = handles.colors.errorRed;
+        return;
     end
+end
 
 selectedLabel = handles.colorDropdown.Value;
 if strcmp(selectedLabel, 'Animal')
@@ -1088,15 +1294,15 @@ else
     colorField = '';
 end
 
- plotInjVolInGUI(handles);
+plotInjVolInGUI(handles);
 end
 
 
 function plotInjVolInGUI(handles)
-    ax = handles.ax;
-    colorcellsby = handles.colorDropdown.Value;
-    volume = handles.volume;
-    [az, el] = view(ax);
+ax = handles.ax;
+colorcellsby = handles.colorDropdown.Value;
+volume = handles.volume;
+[az, el] = view(ax);
 
 
 % Get flip direction safely
@@ -1108,23 +1314,19 @@ else
     flipDirection = 'none';
 end
 
+% Load brain mesh (outline)
+[~, ~, brain_data] = getAtlasFilesForType(handles.atlasTypeDropdown.Value);
+v = brain_data.brain.v;
+f = brain_data.brain.f;
 
-    % Load brain mesh (outline)
-    [~, ~, brain_data] = getAtlasFilesForType(handles.atlasTypeDropdown.Value);
-    v = brain_data.brain.v;
-    f = brain_data.brain.f;
+% Clear previous contents
+cla(ax);
+legend(ax, 'off');
+colorbar(ax, 'off');
 
-
-    % Clear previous contents
-    cla(ax);
-    legend(ax, 'off');
-    colorbar(ax, 'off');
-
-    % Plot brain outline
-    patch(ax, 'Vertices', v, 'Faces', f, 'FaceColor', [0.7, 0.7, 0.7], 'EdgeColor', 'none', 'FaceAlpha', 0.1);
-    hold(ax, 'on');
-
-
+% Plot brain outline
+patch(ax, 'Vertices', v, 'Faces', f, 'FaceColor', [0.7, 0.7, 0.7], 'EdgeColor', 'none', 'FaceAlpha', 0.1);
+hold(ax, 'on');
 
 % Hemisphere flipping setup
 flipToRight = strcmp(flipDirection, 'Right');
@@ -1156,35 +1358,46 @@ else
     uniqueCats = {};
 end
 
-  % Initialize
+% Initialize
 patch_handles = gobjects(0);
 legends = {};
 
 for j = 1:length(volume)
     vol = volume(j);
 
-    % Flip vol if selected
-    if flipToRight
-        flip_idx = vol.ccf_points_cat_ord(:,2) < midline;
-        vol.ccf_points_cat_ord(flip_idx,2) = 2 * midline - vol.ccf_points_cat_ord(flip_idx,2);
-
-        flip_idx = vol.smoothedVertices(:,2) < midline;
-        vol.smoothedVertices(flip_idx,2) = 2 * midline - vol.smoothedVertices(flip_idx,2);
-
-    elseif flipToLeft
-        flip_idx = vol.ccf_points_cat_ord(:,2) > midline;
-        vol.ccf_points_cat_ord(flip_idx,2) = 2 * midline - vol.ccf_points_cat_ord(flip_idx,2);
-
-        flip_idx = vol.smoothedVertices(:,2) > midline;
-        vol.smoothedVertices(flip_idx,2) = 2 * midline - vol.smoothedVertices(flip_idx,2);
-    end
-
     % Assign color and label
     color = colors(catIdx(j), :);
     label = categoryValues{j};
 
-    % Plot patch
-    h = patch(ax, 'Vertices', vol.smoothedVertices, 'Faces', vol.k1, ...
+    % Determine which surfaces to use for plotting
+    if isfield(vol, 'k1_vis') && isfield(vol, 'verts_vis')
+        plot_faces = vol.k1_vis;
+        plot_vertices = vol.verts_vis;
+       
+    else
+        plot_faces = vol.k1;
+        plot_vertices = vol.verts;
+    end
+    
+    % Apply flipping to the selected vertices
+    if flipToRight
+        flip_idx = plot_vertices(:,2) < midline;
+        plot_vertices(flip_idx,2) = 2 * midline - plot_vertices(flip_idx,2);
+        
+        % Also flip the original coordinate data for consistency
+        flip_idx = vol.ccf_points_cat_ord(:,2) < midline;
+        vol.ccf_points_cat_ord(flip_idx,2) = 2 * midline - vol.ccf_points_cat_ord(flip_idx,2);
+    
+    elseif flipToLeft
+        flip_idx = plot_vertices(:,2) > midline;
+        plot_vertices(flip_idx,2) = 2 * midline - plot_vertices(flip_idx,2);
+        
+        % Also flip the original coordinate data for consistency
+        flip_idx = vol.ccf_points_cat_ord(:,2) > midline;
+        vol.ccf_points_cat_ord(flip_idx,2) = 2 * midline - vol.ccf_points_cat_ord(flip_idx,2);
+    end
+
+    h = patch(ax, 'Vertices', plot_vertices, 'Faces', plot_faces, ...
         'FaceColor', color, 'FaceAlpha', 0.2, 'EdgeColor', 'none');
 
     % Add to legend only if label is new
@@ -1197,7 +1410,7 @@ for j = 1:length(volume)
     end
 end
 
-   % Add legend if meaningful
+% Add legend if meaningful
 if ~isempty(legends)
     hLeg = legend(ax, patch_handles, legends, 'Location', 'southoutside');
     hLeg.Box = 'off';
@@ -1213,71 +1426,47 @@ if ~isempty(legends)
     end
 end
 
-    % Final styling
-    axis(ax, 'equal');
-    axis(ax, 'off');
-    set(ax, 'ZDir', 'reverse');
-    view(ax, az, el);
-    hold(ax, 'off');
+% Final styling
+axis(ax, 'equal');
+axis(ax, 'off');
+set(ax, 'ZDir', 'reverse');
+view(ax, az, el);
+hold(ax, 'off');
 
-    
-    % Enable realistic lighting
-    lighting(ax, 'gouraud');         % Smooth lighting (or try 'phong' for shinier surface)
-    material(ax, 'dull');            % 'dull', 'shiny', or 'metal' affect reflectivity
-    camlight(ax, 'headlight');       % Attach light to camera
-
-end
-
-function smoothedVertices = laplacianSmooth(vertices, faces, lambda, iterations)
-    % vertices: Nx3 matrix of vertex coordinates
-    % faces: Mx3 matrix of indices into vertices
-    % lambda: Smoothing factor, typical values are in the range 0.5 - 1
-    % iterations: Number of times the smoothing operation is applied
-
-    smoothedVertices = vertices;
-    for iter = 1:iterations
-        for i = 1:size(vertices, 1)
-            % Find all faces that include this vertex
-            [row, ~] = find(faces == i);
-            % Get unique vertices connected to the current vertex
-            neighborIdx = unique(faces(row, :));
-            neighborIdx(neighborIdx == i) = [];  % Remove the vertex itself
-
-            % Calculate the mean position of neighboring vertices
-            meanPos = mean(smoothedVertices(neighborIdx, :), 1);
-
-            % Update the vertex position
-            smoothedVertices(i, :) = smoothedVertices(i, :) + lambda * (meanPos - smoothedVertices(i, :));
-        end
-    end
+% Enable realistic lighting
+lighting(ax, 'gouraud');         % Smooth lighting (or try 'phong' for shinier surface)
+material(ax, 'dull');            % 'dull', 'shiny', or 'metal' affect reflectivity
+camlight(ax, 'headlight');       % Attach light to camera
+set(ax, 'SortMethod', 'childorder'); %makes shiny surface not shiny
+rotate3d(ax, 'on');
 end
 
 %% plotting helper
 
 function saveCurrentPlot(handles)
-    % Prompt user to choose where to save
-    [file, path] = uiputfile({'*.png'; '*.fig'}, 'Save Plot As', fullfile(handles.baseDir, 'VOL_plot.png'));
-    if isequal(file, 0)
-        return;  % User canceled
-    end
+% Prompt user to choose where to save
+[file, path] = uiputfile({'*.png'; '*.fig'}, 'Save Plot As', fullfile(handles.baseDir, 'VOL_plot.png'));
+if isequal(file, 0)
+    return;  % User canceled
+end
 
-    % Get full file path and strip extension
-    [~, name, ~] = fileparts(file);
-    pngPath = fullfile(path, [name, '.png']);
-    figPath = fullfile(path, [name, '.fig']);
+% Get full file path and strip extension
+[~, name, ~] = fileparts(file);
+pngPath = fullfile(path, [name, '.png']);
+figPath = fullfile(path, [name, '.fig']);
 
-    % Save .png with good resolution
-    exportgraphics(handles.ax, pngPath, 'Resolution', 300);
+% Save .png with good resolution
+exportgraphics(handles.ax, pngPath, 'Resolution', 300);
 
-    % Save .fig for future edits
-    f = figure();
-    copyobj(handles.ax, f);
-    savefig(f, figPath);
-    close(f);
+% Save .fig for future edits
+f = figure();
+copyobj(handles.ax, f);
+savefig(f, figPath);
+close(f);
 
-    % Optional feedback
-    handles.msgLabel.Text = sprintf('Plot saved as:\n%s\n%s', pngPath, figPath);
-    handles.msgLabel.FontColor = handles.colors.successColor;
+% Optional feedback
+handles.msgLabel.Text = sprintf('Plot saved as:\n%s\n%s', pngPath, figPath);
+handles.msgLabel.FontColor = handles.colors.successColor;
 end
 
 
@@ -1478,9 +1667,9 @@ function handles = updateColorDropdown(handles)
 customOptions = {
     'Animal', 'Animal';
     'Channel', 'ChannelName';
-%     'Group', 'GroupName';
+    %     'Group', 'GroupName';
     'Hemisphere', 'hemi'
-};
+    };
 
 % Validate that volume exists
 if ~isfield(handles, 'volume') || isempty(handles.volume)
@@ -1499,7 +1688,7 @@ for i = 1:size(customOptions,1)
 
     hasField = all(arrayfun(@(v) isfield(v, fieldName), handles.volume));
     nonEmptyField = any(arrayfun(@(v) ~isempty(getfield(v, fieldName)), handles.volume));
-    
+
     if hasField && nonEmptyField
         validOptions{end+1} = prettyName; %#ok<AGROW>
         validKeys{end+1} = fieldName; %#ok<AGROW>
@@ -1520,7 +1709,7 @@ handles.colorDropdownMap = containers.Map(validOptions, validKeys);
 handles.colorDropdown.Enable = 'on';
 end
 
-
+%%
 
 function allPresent = checkDependencies()
 % checkDependencies - Verifies required toolboxes and functions are present
@@ -1532,7 +1721,7 @@ missing = {};
 reqToolboxes = {
     'Image Processing Toolbox', ...
     'MATLAB'  % Base MATLAB
-};
+    };
 
 v = ver;
 installedToolboxes = {v.Name};
@@ -1551,7 +1740,7 @@ requiredFunctions = {
     'loadStructureTree', ...
     'linspecer', ...
     'inpolyhedron'
-};
+    };
 
 for i = 1:length(requiredFunctions)
     if isempty(which(requiredFunctions{i}))
@@ -1584,75 +1773,75 @@ helpPanel.HighlightColor = [0.24 0.48 0.54]; % Cerulean border
 header = '<html><body style="font-family:Arial; font-size:12px; color:#16262E; line-height:1.6;">';
 
 section1 = [...
-'<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">📁 Folder and File Setup</h2>'...
-'<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
-'<ul>'...
-'<li><b>📂 Change Folder:</b> Set the working directory for processing volumes</li>'...
-'<li><b>🧬 Channel Selection:</b> Select available channels (C1–C4) with optional naming</li>'...
-'<li><b>🔠 Group & Atlas:</b> Enter group name and choose atlas type for transformation</li>'...
-'</ul>'...
-'</div>'...
-];
+    '<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">📁 Folder and File Setup</h2>'...
+    '<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
+    '<ul>'...
+    '<li><b>📂 Change Folder:</b> Set the working directory for processing volumes</li>'...
+    '<li><b>🧬 Channel Selection:</b> Select available channels (C1–C4) with optional naming</li>'...
+    '<li><b>🔠 Group & Atlas:</b> Enter group name and choose atlas type for transformation</li>'...
+    '</ul>'...
+    '</div>'...
+    ];
 
 
 section2 = [...
-'<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">🧪 Preprocessing and Transformation</h2>'...
-'<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
-'<ul>'...
-'<li><b>🧭 Run AP_histology:</b> Align histology slices to atlas</li>'...
-'<li><b>🧱 Create 3D Volume:</b> Map CSV coordinates into CCF space and generate surface mesh</li>'...
-'<li><b>🧠 Atlas Selection:</b> Required for any transformation step</li>'...
-'</ul>'...
-'</div>'...
-];
+    '<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">🧪 Preprocessing and Transformation</h2>'...
+    '<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
+    '<ul>'...
+    '<li><b>🧭 Run AP_histology:</b> Align histology slices to atlas</li>'...
+    '<li><b>🧱 Create 3D Volume:</b> Map CSV coordinates into CCF space and generate surface mesh</li>'...
+    '<li><b>🧠 Atlas Selection:</b> Required for any transformation step</li>'...
+    '</ul>'...
+    '</div>'...
+    ];
 
 section3 = [...
-'<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">🎨 Visualization Controls</h2>'...
-'<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
-'<ul>'...
-'<li><b>🔁 Flip Hemisphere:</b> Mirror the injection volume to Left/Right</li>'...
-'<li><b>🎨 Color Volume By:</b> Color by Channel, Hemisphere, or Animal</li>'...
-'<li><b>👁️ View Controls:</b> Side, Top, Frontal Views of 3D brain</li>'...
-'<li><b>🧃 Define Color Palette:</b> Custom color setup for plotting</li>'...
-'</ul>'...
-'</div>'...
-];
+    '<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">🎨 Visualization Controls</h2>'...
+    '<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
+    '<ul>'...
+    '<li><b>🔁 Flip Hemisphere:</b> Mirror the injection volume to Left/Right</li>'...
+    '<li><b>🎨 Color Volume By:</b> Color by Channel, Hemisphere, or Animal</li>'...
+    '<li><b>👁️ View Controls:</b> Side, Top, Frontal Views of 3D brain</li>'...
+    '<li><b>🧃 Define Color Palette:</b> Custom color setup for plotting</li>'...
+    '</ul>'...
+    '</div>'...
+    ];
 
 section4 = [...
-'<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">💾 Saving and Outputs</h2>'...
-'<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
-'<ul>'...
-'<li><b>🖼️ Save Plot:</b> Export current 3D view as PNG and FIG</li>'...
-'<li><b>📁 Save to Additional Folder:</b> Export CCF volume `.mat` file to a new location</li>'...
-'<li><b>🧠 Output Folder:</b> Default: <code>OUT/CCF/</code> stores transformed volumes</li>'...
-'</ul>'...
-'</div>'...
-];
+    '<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">💾 Saving and Outputs</h2>'...
+    '<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
+    '<ul>'...
+    '<li><b>🖼️ Save Plot:</b> Export current 3D view as PNG and FIG</li>'...
+    '<li><b>📁 Save to Additional Folder:</b> Export CCF volume `.mat` file to a new location</li>'...
+    '<li><b>🧠 Output Folder:</b> Default: <code>OUT/CCF/</code> stores transformed volumes</li>'...
+    '</ul>'...
+    '</div>'...
+    ];
 
 
 section5 = [...
-'<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">📊 Status and Feedback</h2>'...
-'<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
-'<ul>'...
-'<li><b>✅ Status Panel:</b> Monitors availability of TIFF, AP_histology, and 3D volume</li>'...
-'<li><b>💬 Message Box:</b> Displays feedback and errors during processing</li>'...
-'</ul>'...
-'</div>'...
-];
+    '<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">📊 Status and Feedback</h2>'...
+    '<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
+    '<ul>'...
+    '<li><b>✅ Status Panel:</b> Monitors availability of TIFF, AP_histology, and 3D volume</li>'...
+    '<li><b>💬 Message Box:</b> Displays feedback and errors during processing</li>'...
+    '</ul>'...
+    '</div>'...
+    ];
 
 section6 = [...
-'<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">📚 Advanced Tips</h2>'...
-'<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
-'<ul>'...
-'<li>Ensure consistent naming for TIFF and CSV files</li>'...
-'<li>Run <code>save_atlas_paths.m</code> to add custom atlases</li>'...
-'<li>Confirm that <code>atlas2histology_tform.mat</code> is present before CCF mapping</li>'...
-'<li><a href="https://github.com/cortex-lab/AP_histology" target="_blank">AP_histology GitHub</a></li>'...
-'<li><a href="https://kimlab.io/devatlas" target="_blank">Kim Lab devAtlas</a></li>'...
-'</ul>'...
-'</div>'...
-'</body></html>'...
-];
+    '<h2 style="color:#2E4756; margin-bottom:10px; border-bottom:2px solid #3C7A89;">📚 Advanced Tips</h2>'...
+    '<div style="background-color:#F5F5F5; padding:10px; border-radius:5px;">'...
+    '<ul>'...
+    '<li>Ensure consistent naming for TIFF and CSV files</li>'...
+    '<li>Run <code>save_atlas_paths.m</code> to add custom atlases</li>'...
+    '<li>Confirm that <code>atlas2histology_tform.mat</code> is present before CCF mapping</li>'...
+    '<li><a href="https://github.com/cortex-lab/AP_histology" target="_blank">AP_histology GitHub</a></li>'...
+    '<li><a href="https://kimlab.io/devatlas" target="_blank">Kim Lab devAtlas</a></li>'...
+    '</ul>'...
+    '</div>'...
+    '</body></html>'...
+    ];
 
 
 

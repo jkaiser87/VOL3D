@@ -1,3 +1,5 @@
+% change folder doesnt work ?
+
 function VOL3D_Step2_GUI(baseDir)
 
 if ~checkDependencies()
@@ -472,28 +474,51 @@ fig.UserData.handles = handles;
 
 % Update callbacks to use handles
 t.CellEditCallback = @(src, event) cellEditCallback(src, event, handles);
-btnUpdatePlot.ButtonPushedFcn = @(btn,event) plotDataToAxes(handles, handles.flipDropdown.Value, handles.columnDropdown.Value);
-btnSavePreview.ButtonPushedFcn = @(btn,event) savePreviewPlot(handles);
-btnSaveMetadata.ButtonPushedFcn = @(btn,event) saveMetadata(handles);
-btnCalcVolumeOverlap.ButtonPushedFcn = @(btn,event) CalcVolumeOverlap(handles);
-btnSelectABAStruct.ButtonPushedFcn = @(btn,event) SelectABAStruct(handles);
-btnCalcABAOverlap.ButtonPushedFcn = @(btn,event) CalcABAOverlap(handles);
-btnSaveBatch.ButtonPushedFcn = @(btn,event) saveBatchCallback(handles);
-btnColorByGroup.ButtonPushedFcn = @(btn,event) colorByGroup(handles);
-btnColorByChannel.ButtonPushedFcn = @(btn,event) colorByChannel(handles);
-columnDropdown.ValueChangedFcn = @(dd, event) updateMessage(handles, dd.Value);
-btnSideView.ButtonPushedFcn = @(btn,event) setDynamicView(handles.fig, 0, 0);
-btnTopView.ButtonPushedFcn = @(btn,event) setDynamicView(handles.fig, 90, 90);
-btnFrontView.ButtonPushedFcn = @(btn,event) setDynamicView(handles.fig, -90, 0);
-btnCustomPalette.ButtonPushedFcn = @(src,evt) openPaletteEditor(handles);
+btnSavePreview.ButtonPushedFcn       = @(btn,evt) callWithGuidata(@savePreviewPlot, btn);
+btnSaveMetadata.ButtonPushedFcn      = @(btn,evt) callWithGuidata(@saveMetadata, btn);
+btnCalcVolumeOverlap.ButtonPushedFcn = @(btn,evt) callWithGuidata(@CalcVolumeOverlap, btn);
+btnSelectABAStruct.ButtonPushedFcn   = @(btn,evt) callWithGuidata(@SelectABAStruct, btn);
+btnCalcABAOverlap.ButtonPushedFcn    = @(btn,evt) callWithGuidata(@CalcABAOverlap, btn);
+btnSaveBatch.ButtonPushedFcn         = @(btn,evt) callWithGuidata(@saveBatchCallback, btn);
+btnColorByGroup.ButtonPushedFcn      = @(btn,evt) callWithGuidata(@colorByGroup, btn);
+btnColorByChannel.ButtonPushedFcn    = @(btn,evt) callWithGuidata(@colorByChannel, btn);
+btnCustomPalette.ButtonPushedFcn     = @(btn,evt) callWithGuidata(@openPaletteEditor, btn);
 
+% For plotDataToAxes (with additional args)
+btnUpdatePlot.ButtonPushedFcn = @(btn,evt) callWithGuidata(@plotDataToAxes, btn, ...
+    guidata(btn).flipDropdown.Value, ...
+    guidata(btn).columnDropdown.Value);
+
+% For dropdown
+columnDropdown.ValueChangedFcn = @(dd,evt) callWithGuidata(@updateMessage, dd, dd.Value);
+
+% View buttons
+btnTopView.ButtonPushedFcn   = @(btn, evt) setDynamicView(handles.ax, 90, 90);
+btnSideView.ButtonPushedFcn  = @(btn, evt) setDynamicView(handles.ax, 0, 0);
+btnFrontView.ButtonPushedFcn = @(btn, evt) setDynamicView(handles.ax, -90, 0);
 
 % Set initial button states and message
+guidata(fig, handles);
 updateMessage(handles, handles.columnDropdown.Value);
 
 end
 
 %% GUI functions
+
+function callWithGuidata(fn, src, varargin)
+fig = ancestor(src, 'figure');
+handles = guidata(fig);
+
+% Add this debug block:
+if ~isstruct(handles)
+    disp('⚠️ [DEBUG] guidata did not return a struct');
+    disp(handles);  % might be empty or wrong type
+    error('guidata(fig) did not return a valid handles struct');
+end
+
+feval(fn, handles, varargin{:});
+end
+
 
 function updateMessage(handles, colorby)
 if ~isfield(handles, 'btnSaveBatch') || ~isvalid(handles.btnSaveBatch)
@@ -610,19 +635,23 @@ end
 function colorByGroup(handles)
 % Get components from handles
 t = handles.t;
+data = t.Data;
+
+groups = unique(data(:, handles.colIdx.Group));
+groups(cellfun(@isempty, groups)) = [];
+
+
 msgLabel = handles.msgLabel;
 
 % Get current palette (custom or default)
 palette = getCurrentPalette(handles.baseDir);
 
 % Get groups from table data
-groups = unique(handles.t.Data(:,4));
-groups(cellfun(@isempty, groups)) = [];
 
 groupColorMapping = containers.Map();
 
 % Get table data
-data = t.Data;
+
 
 % Temporarily disable cell edit callback if it exists
 if isprop(t, 'CellEditCallback')
@@ -830,7 +859,9 @@ volumes = struct( ...
     'hemi', {}, ...
     'ccf_points_cat_ord', {}, ...
     'k1', {}, ...
-    'smoothedVertices', {});  % include even if it's sometimes missing
+    'verts', {}, ...
+    'k1_vis', {}, ...
+    'verts_vis', {});
 
 for i = 1:size(data, 1)
     try
@@ -845,26 +876,50 @@ for i = 1:size(data, 1)
         for j = 1:length(S.volume)
             vol = S.volume(j);
             if isfield(vol, 'channels') && strcmp(vol.channels, chanTable)
-                v.Animal = animal;
-                v.Group = group;
-                v.Channel = vol.channels;
-                v.ChannelName = channelName;
-                v.ccf_points_cat_ord = vol.ccf_points_cat_ord;
-                v.k1 = vol.k1;
-                if isfield(vol, 'smoothedVertices')
-                    v.smoothedVertices = vol.smoothedVertices;
+                v = struct( ...
+                    'Animal', animal, ...
+                    'Group', group, ...
+                    'Channel', vol.channels, ...
+                    'ChannelName', channelName, ...
+                    'ccf_points_cat_ord', vol.ccf_points_cat_ord, ...
+                    'hemi', []);
+
+                % === CALCULATION SURFACES (for accurate overlap calculations) ===
+                if isfield(vol, 'k1') && isfield(vol, 'verts')
+                    v.k1 = vol.k1;
+                    v.verts = vol.verts;
                 else
-                    v.smoothedVertices = [];  % Ensure field exists
+                    % Fallback if fields missing
+                    v.k1 = [];
+                    v.verts = vol.ccf_points_cat_ord;
                 end
+
+                % === VISUALIZATION SURFACES (for pretty plots) ===
+                if isfield(vol, 'k1_vis') && isfield(vol, 'verts_vis')
+                    v.k1_vis = vol.k1_vis;
+                    v.verts_vis = vol.verts_vis;
+                elseif isfield(vol, 'k1_convhull') && isfield(vol, 'smoothedVertices_convhull')
+                    % Legacy naming support
+                    v.k1_vis = vol.k1_convhull;
+                    v.verts_vis = vol.smoothedVertices_convhull;
+                elseif isfield(vol, 'k1_convhull') && isfield(vol, 'verts_convhull')
+                    % Another legacy variant
+                    v.k1_vis = vol.k1_convhull;
+                    v.verts_vis = vol.verts_convhull;
+                else
+                    % No separate visualization surface - use calculation surface for both
+                    v.k1_vis = v.k1;
+                    v.verts_vis = v.verts;
+                end
+                % Hemisphere info
                 if isfield(vol, 'hemi')
                     v.hemi = vol.hemi;
-                else
-                    v.hemi = [];  % Ensure field exists
                 end
-                volumes(end+1) = v; %#ok<AGROW>
-                break;
+
+                volumes(end+1) = v;
             end
         end
+
     catch ME
         sprintf('Failed to load volume from %s: %s', baseDir, ME.message);
     end
@@ -883,41 +938,45 @@ function [legendHandles, legendLabels] = plotDataToAxes(handles, flipDirection, 
 if nargin < 4 || isempty(subsetIdx)
     subsetIdx = true(height(handles.t.Data), 1);
 end
+
 if nargin < 5 || isempty(ax)
-    ax = handles.ax;
+    if isfield(handles, 'ax') && isvalid(handles.ax)
+        ax = handles.ax;
+    else
+        error('No valid axes found in handles.');
+    end
 end
+
+%    FORCE fresh read of current table data
+handles.t.Data = get(handles.t, 'Data');
+data = handles.t.Data;
 
 [az, el] = view(ax);
 cla(ax); hold(ax, 'on');
 legend(ax, 'off'); colorbar(ax, 'off');
 
 % Extract data and volumes
-data = handles.t.Data;
-allData = handles.t.Data;
 excludeFlags = cellfun(@(x) isequal(x, true), data(:, handles.colIdx.Exclude));
 includeFlags = ~excludeFlags;
-includedIdx = includeFlags & subsetIdx; 
+includedIdx = includeFlags & subsetIdx;
 
-% Predefine keys
-Globalkeys = strings(sum(includeFlags), 1);
-
-% Final subset - excluding subset for paneling and exluded rows
-data = data(includedIdx, :);
-volumes = handles.volumes(includedIdx);
-
-% Validate atlas consistency and load
-atlasTypes = data(:, handles.colIdx.AtlasType);
-if numel(unique(atlasTypes)) ~= 1
+% Validate atlas consistency FIRST (before subsetting)
+includedAtlasTypes = data(includedIdx, handles.colIdx.AtlasType);
+if numel(unique(includedAtlasTypes)) ~= 1
     handles.msgLabel.Text = 'Error: All included volumes must have the same Atlas Type.';
     handles.msgLabel.FontColor = handles.colors.errorRed;
     return;
 end
-[~, ~, brain_data] = getAtlasFilesForType(atlasTypes{1});
+
+% Final subset - excluding subset for paneling and excluded rows
+data = data(includedIdx, :);
+volumes = handles.volumes(includedIdx);
+
+[~, ~, brain_data] = getAtlasFilesForType(includedAtlasTypes{1});
 
 % Plot reference brain
 patch(ax, 'Vertices', brain_data.brain.v, 'Faces', brain_data.brain.f, ...
-      'FaceColor', [0.7 0.7 0.7], 'EdgeColor', 'none', 'FaceAlpha', 0.1);
-
+    'FaceColor', [0.7 0.7 0.7], 'EdgeColor', 'none', 'FaceAlpha', 0.1);
 
 % Flip settings
 midline = mean([min(brain_data.brain.v(:,2)), max(brain_data.brain.v(:,2))]);
@@ -929,40 +988,36 @@ useManual = any(strcmpi(data(:, handles.colIdx.ColorSource), 'manual'));
 
 % --- Define Color Keys & Map
 Globalkeys = strings(sum(includeFlags), 1);
-labels = strings(numel(volumes), 1); 
+labels = strings(numel(volumes), 1);
 
+% --- Rebuild color map if colorby is not 'plotColor'
+colorMap = containers.Map();
 if ~strcmpi(colorby, 'plotColor')
-    switch lower(colorby)
-        case 'animal'
-           Globalkeys = string(allData(includeFlags, handles.colIdx.Animal));
-        case 'group'
-            Globalkeys = string(allData(includeFlags, handles.colIdx.Group));
-        case 'hemisphere'
-            Globalkeys = string({volumes.hemi});
-        case 'channel'
-            Globalkeys = strings(sum(includeFlags), 1);
-            for k = 1:sum(includeFlags)
-                chanNameIdx = handles.colIdx.ChannelName;
-                chanIdx = handles.colIdx.Channel;
-                thisRow = find(includeFlags);  % map included row to global row index
-                r = thisRow(k);
-                 if isfield(handles.colIdx, 'ChannelName') && chanNameIdx > 0
-                    val = allData{r, chanNameIdx};
-                    if ~isempty(val)
-                        Globalkeys(k) = string(val);
-                        continue;
-                    end
+    Globalkeys = strings(numel(volumes), 1);
+
+    for k = 1:numel(volumes)
+        vol = volumes(k);
+        switch lower(colorby)
+            case 'animal'
+                Globalkeys(k) = string(vol.Animal);
+            case 'group'
+                Globalkeys(k) = string(vol.Group);
+            case 'channel'
+                if isfield(vol, 'ChannelName') && ~isempty(vol.ChannelName)
+                    Globalkeys(k) = string(vol.ChannelName);
+                else
+                    Globalkeys(k) = string(vol.Channel);
                 end
-                Globalkeys(k) = string(allData{r, chanIdx});
-            end
-        otherwise
-            Globalkeys = repmat("undefined", sum(includeFlags), 1);
+            case 'hemisphere'
+                Globalkeys(k) = string(vol.hemi);
+            otherwise
+                Globalkeys(k) = "undefined";
+        end
     end
 
-    % Assign color map based only on included keys
+    Globalkeys(ismissing(Globalkeys) | Globalkeys == "") = [];
     uniqueKeys = unique(Globalkeys);
     cmap = getCurrentPalette(handles.baseDir);
-    colorMap = containers.Map();
     for k = 1:numel(uniqueKeys)
         colorMap(uniqueKeys(k)) = cmap(mod(k-1, size(cmap,1)) + 1, :);
     end
@@ -974,66 +1029,102 @@ legendLabels = {};
 
 for i = 1:numel(volumes)
     vol = volumes(i);
-    vertices = vol.ccf_points_cat_ord;
+%    vertices = vol.ccf_points_cat_ord; %not needed?
 
-    % Apply flipping
-    if flipToRight
-        flip_idx = vertices(:, 2) < midline;
-        vertices(flip_idx, 2) = 2 * midline - vertices(flip_idx, 2);
-    elseif flipToLeft
-        flip_idx = vertices(:, 2) > midline;
-        vertices(flip_idx, 2) = 2 * midline - vertices(flip_idx, 2);
-    end
-
-     % Assign color & label
+    % Assign color & label
     if strcmpi(colorby, 'plotColor')
         color = hex2rgb(data{i, handles.colIdx.PlotColor});
         source = data{i, handles.colIdx.ColorSource};
         if useManual
-            label = string(vol.Animal) + " - " + string(vol.Channel);
+            if isfield(handles.colIdx, 'ChannelName') && ...
+                    ~isempty(data{i, handles.colIdx.ChannelName})
+                label = string(data{i, handles.colIdx.ChannelName});
+            else
+                label = string(data{i, handles.colIdx.Channel});
+            end
         else
             switch lower(string(source))
                 case 'group'
-                    label = string(vol.Group);
+                    label = string(data{i, handles.colIdx.Group});
+
                 case 'animal'
-                    label = string(vol.Animal);
+                    label = string(data{i, handles.colIdx.Animal});
+
                 case 'channel'
-                    if isfield(vol, 'ChannelName') && ~isempty(vol.ChannelName)
-                        label = string(vol.ChannelName);
+                    % Fallback logic for ChannelName
+                    if isfield(handles.colIdx, 'ChannelName') && ...
+                            ~isempty(data{i, handles.colIdx.ChannelName})
+                        label = string(data{i, handles.colIdx.ChannelName});
                     else
-                        label = string(vol.Channel);
+                        label = string(data{i, handles.colIdx.Channel});
                     end
+
                 otherwise
-                    label = string(vol.Animal) + " - " + string(vol.Channel);
+                    label = string(data{i, handles.colIdx.Animal}) + ...
+                        " - " + string(data{i, handles.colIdx.Channel});
             end
+
         end
     else
-        % Recompute key dynamically for this volume
+        % Dynamically assign label from colorby
+
         switch lower(colorby)
             case 'animal'
-                label = string(vol.Animal);
+                label = string(data{i, handles.colIdx.Animal});
+
             case 'group'
-                label = string(vol.Group);
+                label = string(data{i, handles.colIdx.Group});
+
             case 'channel'
-                if isfield(vol, 'ChannelName') && ~isempty(vol.ChannelName)
-                    label = string(vol.ChannelName);
+                % Check if ChannelName column exists and is not empty
+                if isfield(handles.colIdx, 'ChannelName') && ~isempty(data{i, handles.colIdx.ChannelName})
+                    label = string(data{i, handles.colIdx.ChannelName});
                 else
-                    label = string(vol.Channel);
+                    label = string(data{i, handles.colIdx.Channel});
                 end
+
             case 'hemisphere'
-                label = string(vol.hemi);
+                label = string(data{i, handles.colIdx.Hemisphere});
+
             otherwise
                 label = "undefined";
         end
 
-        color = colorMap(label);
+        % Ensure label is not empty
+        if ismissing(label) || strlength(label) == 0
+            label = "undefined";
+        end
+
+        % Get color with fallback
+        if isKey(colorMap, label)
+            color = colorMap(label);
+        else
+            warning('Label "%s" not found in colorMap. Using gray.', label);
+            color = [0.5 0.5 0.5]; % fallback
+        end
     end
 
-    % Plot patch
-    h = patch(ax, 'Vertices', vertices, 'Faces', vol.k1, ...
-        'FaceColor', color, 'EdgeColor', 'none', 'FaceAlpha', 0.2);
+    plot_faces = vol.k1_vis; %vol should be put to k1_vis in loadVolumesFromTable
+    plot_vertices = vol.verts_vis;
 
-     % Legend
+    % Apply flipping to the selected vertices (local copy only)
+    if flipToRight
+        flip_idx = plot_vertices(:,2) < midline;
+        plot_vertices(flip_idx,2) = 2 * midline - plot_vertices(flip_idx,2);
+    elseif flipToLeft
+        flip_idx = plot_vertices(:,2) > midline;
+        plot_vertices(flip_idx,2) = 2 * midline - plot_vertices(flip_idx,2);
+    end
+
+    try
+        % Your patch creation code here
+        h = patch(ax, 'Vertices', plot_vertices, 'Faces', plot_faces, ...
+            'FaceColor', color, 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+    catch ME
+        fprintf('  ERROR creating patch: %s\n', ME.message);
+    end
+
+    % Legend
     label = char(label);
     if ~any(strcmp(legendLabels, label))
         h.DisplayName = label;
@@ -1049,6 +1140,48 @@ if ~isempty(legendHandles)
     legend(ax, legendHandles, legendLabels, 'Location', 'southoutside', 'NumColumns', 2);
 end
 
+% % ----- DEBUG: Print max dimensions of brain volume -----
+% % Load atlas
+% [~, ~, brain_data] = getAtlasFilesForType(atlasTypes{1});
+% min_brain = min(brain_data.brain.v, [], 1); % [AP, DV, ML]
+% max_brain = max(brain_data.brain.v, [], 1); % [AP, DV, ML]
+%
+% fprintf('Brain volume dimensions:\n');
+% fprintf('  AP (x): %.2f - %.2f\n', min_brain(1), max_brain(1));
+% fprintf('  DV (y): %.2f - %.2f\n', min_brain(2), max_brain(2));
+% fprintf('  ML (z): %.2f - %.2f\n', min_brain(3), max_brain(3));
+
+% % ----- DEBUG: Add arrows to portray axes (x,y,z)-----
+
+% v = brain_data.brain.v;
+% origin = mean(v, 1);
+%
+% arrowLength = 100; % adjust if too small/large
+%
+% % AP axis (X) — RED
+% quiver3(ax, origin(1), origin(2), origin(3), arrowLength, 0, 0, ...
+%     'Color', [1 0 0], 'LineWidth', 2, 'MaxHeadSize', 1);
+% text(origin(1) + arrowLength + 10, origin(2), origin(3), 'X = AP', ...
+%     'Color', [1 0 0], 'FontSize', 10, 'Parent', ax);
+%
+% % ML axis (Y) — GREEN
+% quiver3(ax, origin(1), origin(2), origin(3), 0, arrowLength, 0, ...
+%     'Color', [0 1 0], 'LineWidth', 2, 'MaxHeadSize', 1);
+% text(origin(1), origin(2) + arrowLength + 10, origin(3), 'Y = ML', ...
+%     'Color', [0 1 0], 'FontSize', 10, 'Parent', ax);
+%
+% % DV axis (Z) — BLUE
+% quiver3(ax, origin(1), origin(2), origin(3), 0, 0, arrowLength, ...
+%     'Color', [0 0 1], 'LineWidth', 2, 'MaxHeadSize', 1);
+% text(origin(1), origin(2), origin(3) + arrowLength + 10, 'Z = DV', ...
+%     'Color', [0 0 1], 'FontSize', 10, 'Parent', ax);
+%
+% ---- Draw a large dot at (0, 0, 0) ----
+% scatter3(ax, 0, 0, 0, 100, 'k', 'filled');  % large black dot
+% text(10, 10, 10, 'Origin (0,0,0)', ...
+%     'Color', 'k', 'FontSize', 10, 'FontWeight', 'bold', 'Parent', ax);
+
+
 axis(ax, 'equal'); axis(ax, 'off'); set(ax, 'ZDir', 'reverse');
 view(ax, az, el); hold(ax, 'off');
 
@@ -1056,17 +1189,67 @@ view(ax, az, el); hold(ax, 'off');
 lighting(ax, 'gouraud');         % Smooth lighting (or try 'phong' for shinier surface)
 material(ax, 'dull');            % 'dull', 'shiny', or 'metal' affect reflectivity
 camlight(ax, 'headlight');       % Attach light to camera
+set(ax, 'SortMethod', 'childorder'); %makes shiny surface not shiny
 
 end
-    
 
 
-function rgb = hex2rgb(hex)
-    if startsWith(hex, '#'), hex = hex(2:end); end
-    rgb = reshape(sscanf(hex, '%2x') / 255, 1, 3);
+function rgb = hex2rgb(colorInput)
+% Convert hex color string or MATLAB color name to RGB values
+
+defaultColor = [0.5 0.5 0.5];  % Fallback
+
+% Validate input
+if ~(ischar(colorInput) || isstring(colorInput)) || isempty(colorInput)
+    warning('Invalid color input. Using default gray color.');
+    rgb = defaultColor;
+    return;
 end
 
+% Normalize input
+colorLower = lower(char(colorInput));
 
+% MATLAB named colors
+matlabColors = containers.Map({...
+    'red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'black', 'white', ...
+    'r', 'g', 'b', 'c', 'm', 'y', 'k', 'w'}, {...
+    [1 0 0], [0 1 0], [0 0 1], [0 1 1], [1 0 1], [1 1 0], [0 0 0], [1 1 1], ...
+    [1 0 0], [0 1 0], [0 0 1], [0 1 1], [1 0 1], [1 1 0], [0 0 0], [1 1 1]});
+
+% Named color match
+if isKey(matlabColors, colorLower)
+    rgb = matlabColors(colorLower);
+    return;
+end
+
+% Strip "#" if present
+if startsWith(colorLower, '#')
+    colorLower = colorLower(2:end);
+end
+
+% Must be valid 6-digit hex
+if length(colorLower) ~= 6 || ~all(ismember(colorLower, '0123456789abcdef'))
+    warning('Invalid color "%s". Using default gray.', colorInput);
+    rgb = defaultColor;
+    return;
+end
+
+% Parse hex -> RGB
+try
+    rgbVals = sscanf(colorLower, '%2x%2x%2x', [1 3]);
+    if numel(rgbVals) == 3
+        rgb = rgbVals / 255;
+    else
+        warning('Could not parse "%s". Using default gray.', colorInput);
+        rgb = defaultColor;
+    end
+catch
+    warning('Error parsing "%s". Using default gray.', colorInput);
+    rgb = defaultColor;
+end
+end
+
+%%
 function [atlas_files, atlas_base_dir, brain_data] = getAtlasFilesForType(atlasType)
 % getAtlasFilesForType - Load atlas files, base dir, and brain hull (with midline) for a given atlasType
 
@@ -1105,8 +1288,6 @@ if ~exist(brain_path, 'file')
 end
 brain_data = load(brain_path);  % should include fields like brain.v, brain.f, brain.midline
 end
-
-
 
 function [tv, av, st] = load_atlas_files(atlasType)
 
@@ -1199,7 +1380,7 @@ axNew  = axes('Parent', f);
 tempHandles = struct();
 tempHandles.t = handles.t;
 tempHandles.colIdx = handles.colIdx;
-tempHandles.ax = axNew ;
+tempHandles.ax = axNew;
 tempHandles.baseDir = handles.baseDir;
 tempHandles.flipDirection = handles.flipDropdown.Value;
 tempHandles.colorby = handles.columnDropdown.Value;
@@ -1287,60 +1468,69 @@ for iColor = 1:length(colorByTags)
     for iSplit = 1:length(splitByTags)
         splitBy = splitByTags{iSplit};
 
-         f = figure('Visible', 'off', 'Color', 'w', 'Position', [100 100 1200 800]);
-
+        f = figure('Visible', 'off', 'Color', 'w', 'Position', [100 100 1200 800]);
 
         % Handle splitBy 'none'
         if strcmpi(splitBy, 'none')
-            subsetIdx = true(size(handles.t.Data, 1), 1);  % Include all
+            legendHandles = [];
+            legendLabels = {};
+
+            excludeFlags = cellfun(@(x) isequal(x, true), handles.t.Data(:, handles.colIdx.Exclude));
+            subsetIdx = ~excludeFlags; % Only plot non-excluded
+            if ~any(subsetIdx)
+                close(f);
+                continue;
+            end
+
             label = 'All';
 
             set(f, 'Position', [100 100 1200 800]);
             ax = axes('Parent', f, 'Position', [0.1 0.1 0.8 0.8]);
+            [h, labels] = plotDataToAxes(handles, flipDropdown.Value, colorBy, subsetIdx, ax);
 
-            [h, labels] = plotDataToAxes(handles, flipDropdown.Value, colorBy, subsetIdx);
-             if ~isempty(hScatter)
-                legend(ax, hScatter, labels, 'Location', 'southoutside');
+            if ~isempty(h)
+                legend(ax, h, labels, 'Location', 'southoutside', 'NumColumns', 2);
             end
-                        
+
+
             set(ax, 'View', currentView);
             filename = sprintf('%s_%s_coloredby-%s', prefix, label, colorBy);
             savePlot(f, outDir, filename, splitBy, colorBy);
 
         else
 
-        excludeFlags = cellfun(@(x) isequal(x, true), handles.t.Data(:, handles.colIdx.Exclude));
-        baseIdx = ~excludeFlags; %incorporating excluded rows here in case a full subset gets excluded, otherwise results in empty panel
-        % Determine tag values for all rows (must match t.Data size!)
-        
-        switch lower(splitBy)
-            case 'group'
-                tags = string(handles.t.Data(:, handles.colIdx.Group));
-            case 'animal'
-                tags = string(handles.t.Data(:, handles.colIdx.Animal));
-            case 'channel'
-                if isfield(handles.colIdx, 'ChannelName') && handles.colIdx.ChannelName > 0
-                    tags = string(handles.t.Data(:, handles.colIdx.ChannelName));
-                else
-                    tags = string(handles.t.Data(:, handles.colIdx.Channel));
-                end
-        end
+            excludeFlags = cellfun(@(x) isequal(x, true), handles.t.Data(:, handles.colIdx.Exclude));
+            baseIdx = ~excludeFlags; %incorporating excluded rows here in case a full subset gets excluded, otherwise results in empty panel
+            % Determine tag values for all rows (must match t.Data size!)
 
-        uniqueVals = unique(tags(baseIdx));
-        nGroups = length(uniqueVals);
+            switch lower(splitBy)
+                case 'group'
+                    tags = string(handles.t.Data(:, handles.colIdx.Group));
+                case 'animal'
+                    tags = string(handles.t.Data(:, handles.colIdx.Animal));
+                case 'channel'
+                    if isfield(handles.colIdx, 'ChannelName') && handles.colIdx.ChannelName > 0
+                        tags = string(handles.t.Data(:, handles.colIdx.ChannelName));
+                    else
+                        tags = string(handles.t.Data(:, handles.colIdx.Channel));
+                    end
+            end
+
+            uniqueVals = unique(tags(baseIdx));
+            nGroups = length(uniqueVals);
 
             if nGroups == 0
                 close(f);
                 continue;
             end
-            
-        % Create subplot grid
+
+            % Create subplot grid
             [nRows, nCols] = numSubplots(nGroups);
             if nGroups <= 3
                 nRows = 1; nCols = nGroups; % Horizontal layout
             end
 
-                        % Collect legend entries across all panels
+            % Collect legend entries across all panels
             allh = [];
             allLabels = {};
 
@@ -1352,18 +1542,18 @@ for iColor = 1:length(colorByTags)
 
 
 
-        for u = 1:numel(uniqueVals)
-            ax = axArray(u);
-            thisVal = uniqueVals(u);
-            splitMask = strcmp(tags, thisVal);
-            subsetIdx = baseIdx & splitMask; %both panel and excluded subset
+            for u = 1:numel(uniqueVals)
+                ax = axArray(u);
+                thisVal = uniqueVals(u);
+                splitMask = strcmp(tags, thisVal);
+                subsetIdx = baseIdx & splitMask; %both panel and excluded subset
 
-            if ~any(subsetIdx), continue; end
-            [temph, tempLabels] = plotDataToAxes(handles, flipDropdown.Value, colorBy, subsetIdx, ax);
-            legend(ax, 'off');  % Force disable panel legend
-             set(ax, 'View', currentView);
+                if ~any(subsetIdx), continue; end
+                [temph, tempLabels] = plotDataToAxes(handles, flipDropdown.Value, colorBy, subsetIdx, ax);
+                legend(ax, 'off');  % Force disable panel legend
+                set(ax, 'View', currentView);
 
-         % Collect unique legend entries
+                % Collect unique legend entries
                 if ~isempty(temph)
                     for k = 1:length(temph)
                         thisLabel = tempLabels{k};
@@ -1373,9 +1563,9 @@ for iColor = 1:length(colorByTags)
                         end
                     end
                 end
-        end
+            end
 
-           if ~isempty(allh)
+            if ~isempty(allh)
                 validIdx = isgraphics(allh);
                 if any(validIdx)
                     % Create a new axes at the bottom for the legend
@@ -1391,11 +1581,11 @@ for iColor = 1:length(colorByTags)
                     lgd.Units = 'normalized';
                     lgd.Position = [0.5 - lgd.Position(3)/2, 0, lgd.Position(3), lgd.Position(4)];
                 end
-           end
+            end
 
         end
-filename = sprintf('%s_splitby-%s_coloredby-%s', prefix, splitBy, colorBy);
-savePlot(f, outDir, filename, splitBy, colorBy);
+        filename = sprintf('%s_splitby-%s_coloredby-%s', prefix, splitBy, colorBy);
+        savePlot(f, outDir, filename, splitBy, colorBy);
 
         %close(f);
     end
@@ -1415,13 +1605,13 @@ end
 % Helper function to dynamically find and set the view of the axes
 function setDynamicView(fig, az, el)
 ax = findobj(fig, 'Type', 'Axes');  % Find axes in the figure
-    if isempty(ax)
-        disp('No axes found in the figure.');
-        return;
-    end    
+if isempty(ax)
+    disp('No axes found in the figure.');
+    return;
+end
 view(ax, az, el); % Set the view
-    % Store the current view settings in the figure's UserData
-    fig.UserData.currentView = [az, el];
+% Store the current view settings in the figure's UserData
+fig.UserData.currentView = [az, el];
 end
 
 
@@ -1574,19 +1764,21 @@ for i = 1:numel(volumes)
 
     vol = volumes(i);
     flipped = false;
-
-    if strcmp(flipDirection, 'right') && isfield(vol, 'hemi') && strcmpi(vol.hemi, 'left')
-        flip_idx = vol.smoothedVertices(:,2) < midline;
-        vol.smoothedVertices(flip_idx,2) = 2 * midline - vol.smoothedVertices(flip_idx,2);
-        flipped = true;
-    elseif strcmp(flipDirection, 'left') && isfield(vol, 'hemi') && strcmpi(vol.hemi, 'right')
-        flip_idx = vol.smoothedVertices(:,2) > midline;
-        vol.smoothedVertices(flip_idx,2) = 2 * midline - vol.smoothedVertices(flip_idx,2);
+    
+    %flipping if set to true
+    if isfield(vol, 'hemi') && ...
+       ((strcmp(flipDirection, 'right') && strcmpi(vol.hemi, 'left')) || ...
+        (strcmp(flipDirection, 'left') && strcmpi(vol.hemi, 'right')))
+        vol.verts(:,2) = 2 * midline - vol.verts(:,2);
         flipped = true;
     end
 
+
     if flipped
-        volumes(i).smoothedVertices = vol.smoothedVertices;
+            vol.k1 = fliplr(vol.k1);  % Flip face vertex ordering (fix orientation)
+    volumes(i).verts = vol.verts; 
+    volumes(i).k1 = vol.k1;
+        volumes(i).verts = vol.verts; 
         volumes(i).ChannelName = [vol.ChannelName '_flip'];
     end
 end
@@ -1597,7 +1789,7 @@ if ~exist(outDir, 'dir')
 end
 
 resolution = 10; % µm, * atlas resolution !
-plotResults = false; %default, have not tried with true but should work
+plotResults = true; %default, have not tried with true but should work
 
 if plotResults
     figDir = fullfile(outDir, 'FIG-VOL');
@@ -1611,16 +1803,81 @@ gridInside = cell(1, nVol);
 
 for i = 1:nVol
     vol = volumes(i);
-    mins = min(vol.smoothedVertices);
-    maxs = max(vol.smoothedVertices);
+    mins = min(vol.verts);
+    maxs = max(vol.verts);
     [X, Y, Z] = ndgrid(mins(1):resolution:maxs(1), ...
         mins(2):resolution:maxs(2), ...
         mins(3):resolution:maxs(3));
     grid_points = [X(:), Y(:), Z(:)];
-    inside_mask = inpolyhedron(vol.k1, vol.smoothedVertices, grid_points);
+    inside_mask = inpolyhedron(vol.k1, vol.verts, grid_points);
     gridInside{i} = grid_points(inside_mask, :);
     estVolumes(i) = size(gridInside{i}, 1) * resolution^3;
 end
+
+% ---- Per-volume summary with min/max coordinates + metadata ----
+hasChannelName = isfield(volumes(1), 'ChannelName');
+columnNames = {'ap', 'dv', 'ml', 'coord', 'Channel', 'apperc', 'mlperc', 'dvperc', 'hemisphere', 'Animal', 'Group'};
+if hasChannelName
+    columnNames{end+1} = 'ChannelName';
+end
+
+FinalData = array2table(zeros(0, numel(columnNames)));
+FinalData.Properties.VariableNames = columnNames;
+
+% Get atlas bounds
+x_min = min(brain_data.brain.v(:,1)); % AP
+x_max = max(brain_data.brain.v(:,1));
+y_min = min(brain_data.brain.v(:,2)); % ML
+y_max = max(brain_data.brain.v(:,2));
+z_min = min(brain_data.brain.v(:,3)); % DV
+z_max = max(brain_data.brain.v(:,3));
+
+for i = 1:nVol
+    vol = volumes(i);
+
+    % Get min/max coordinates
+    min_coords = min(vol.verts, [], 1);  % [X Y Z] = [AP ML DV]
+    max_coords = max(vol.verts, [], 1);
+
+    minmax = vertcat(min_coords, max_coords);  % 2x3
+    currentData = array2table(minmax, 'VariableNames', {'ap', 'ml', 'dv'});
+
+    % Add required metadata
+    currentData.coord = {'min'; 'max'};
+    currentData.Channel = repmat(vol.Channel, 2, 1);
+    currentData.apperc = ((currentData.ap - x_min) / (x_max - x_min)) * 100;
+    currentData.mlperc = ((currentData.ml - y_min) / (y_max - y_min)) * 100;
+    currentData.dvperc = ((currentData.dv - z_min) / (z_max - z_min)) * 100;
+    currentData.hemisphere = repmat({'L'}, 2, 1);
+    currentData.hemisphere(currentData.ml > midline) = {'R'};
+    currentData.Animal = repmat({vol.Animal}, 2, 1);
+
+    if isfield(vol, 'Group')
+        currentData.Group = repmat({vol.Group}, 2, 1);
+    else
+        currentData.Group = repmat({'unknown'}, 2, 1);
+    end
+
+    % Always define ChannelName column if expected
+    if hasChannelName
+        if isfield(vol, 'ChannelName') && ~isempty(vol.ChannelName)
+            currentData.ChannelName = repmat({vol.ChannelName}, 2, 1);
+        else
+            currentData.ChannelName = repmat({''}, 2, 1);  % keep column count consistent
+        end
+    end
+
+    FinalData = [FinalData; currentData];
+end
+
+% Save CSV
+minmaxname = fullfile(outDir, 'VOL3D_Volume_MinMaxCoords.csv');
+writetable(FinalData, minmaxname);
+
+% Status message
+handles.msgLabel.Text = sprintf('✅ Min/Max coordinate results saved:\n%s\nContinuing with overlap calculation ...', minmaxname);
+handles.msgLabel.FontColor = handles.colors.statusPending;
+guidata(handles.fig, handles);
 
 % Compare all pairs
 overlapResults = struct('animal1', {}, 'channel1', {}, 'animal2', {}, 'channel2', {}, ...
@@ -1628,7 +1885,7 @@ overlapResults = struct('animal1', {}, 'channel1', {}, 'animal2', {}, 'channel2'
 
 for i = 1:nVol
     vol1 = volumes(i);
-    
+
     % --- PROGRESS BAR DISPLAY (per volume)
     nBlocks = 20;  % Number of visual blocks in the progress bar
     progress = i / length(volumes);
@@ -1636,14 +1893,13 @@ for i = 1:nVol
     barStr = [repmat('█', 1, filledBlocks), repmat('░', 1, nBlocks - filledBlocks)];
     handles.msgLabel.Text = sprintf('Calculating Overlap [%s] %d/%d Volumes', barStr, i, length(volumes));
     drawnow;
-    
 
     for j = i+1:nVol
 
         vol2 = volumes(j);
 
         % --- vol1 → vol2
-        overlap_mask_12 = inpolyhedron(vol2.k1, vol2.smoothedVertices, gridInside{i});
+        overlap_mask_12 = inpolyhedron(vol2.k1, vol2.verts, gridInside{i});
         overlap_points_12 = gridInside{i}(overlap_mask_12, :);
         overlap_volume_12 = sum(overlap_mask_12) * resolution^3;
         perc1 = (overlap_volume_12 / estVolumes(i)) * 100;
@@ -1659,7 +1915,7 @@ for i = 1:nVol
             'overlap_percentage', perc1);
 
         % --- vol2 → vol1
-        overlap_mask_21 = inpolyhedron(vol1.k1, vol1.smoothedVertices, gridInside{j});
+        overlap_mask_21 = inpolyhedron(vol1.k1, vol1.verts, gridInside{j});
         overlap_points_21 = gridInside{j}(overlap_mask_21, :);
         overlap_volume_21 = sum(overlap_mask_21) * resolution^3;
         perc2 = (overlap_volume_21 / estVolumes(j)) * 100;
@@ -1679,22 +1935,31 @@ for i = 1:nVol
             alphaVal = 0.2;
             f = figure('Color', 'w');
             hold on
-            patch('Vertices', vol1.smoothedVertices, 'Faces', vol1.k1, ...
-                'FaceColor', vol1.channelColor, 'FaceAlpha', alphaVal, 'EdgeColor', 'none');
-            patch('Vertices', vol2.smoothedVertices, 'Faces', vol2.k1, ...
-                'FaceColor', vol2.channelColor, 'FaceAlpha', alphaVal, 'EdgeColor', 'none');
+
+            % Plot brain mesh patch (transparent gray)
+            brainV = brain_data.brain.v; % vertex list [N x 3]
+            brainF = brain_data.brain.f; % faces [M x 3]
+            patch('Vertices', brainV, 'Faces', brainF, ...
+                  'FaceColor', [0.8 0.8 0.8], 'FaceAlpha', 0.1, 'EdgeColor', 'none', 'DisplayName','brain');
+    
+            % Plot surfaces
+            patch('Vertices', vol1.verts, 'Faces', vol1.k1, ...
+                'FaceColor', 'red', 'FaceAlpha', alphaVal, 'EdgeColor', 'none');
+            patch('Vertices', vol2.verts, 'Faces', vol2.k1, ...
+                'FaceColor', 'blue', 'FaceAlpha', alphaVal, 'EdgeColor', 'none');
+           
             scatter3(overlap_points_12(:,1), overlap_points_12(:,2), overlap_points_12(:,3), 10, 'k', 'filled');
             legend({vol1.ChannelName, vol2.ChannelName, 'Overlap'});
             axis equal; axis off; view(3); rotate3d on
-            title(sprintf('%s × %s', vol1.ChannelName, vol2.ChannelName));
-            savefig(f, fullfile(figDir, sprintf('%s--%s_overlap.fig', ...
-                vol1.ChannelName, vol2.ChannelName)));
+            title(sprintf('%s-%s × %s-%s',  vol1.Animal, vol1.ChannelName, vol2.Animal, vol2.ChannelName));
+            view(90, 90);
+            % Save by Animal-ChannelName
+            savefig(f, fullfile(figDir, sprintf('%s-%s-%s-%s_overlap.fig', ...
+                vol1.Animal, vol1.ChannelName, vol2.Animal, vol2.ChannelName)));
             close(f);
         end
     end
 end
-
-
 
 % Export to CSV
 resultsTable = struct2table(overlapResults);
@@ -1729,9 +1994,9 @@ colorbar;
 caxis([0 100]);
 xticks(1:n);
 yticks(1:n);
+set(gca, 'TickLabelInterpreter', 'none');
 xticklabels(uniqueLabels);
 yticklabels(uniqueLabels);
-set(gca, 'TickLabelInterpreter', 'none');  % 👈 prevents subscript formatting
 xtickangle(45);
 title('Volume Overlap (% of Row Volume in Column)');
 axis equal tight;
@@ -1895,15 +2160,15 @@ uibutton(summaryLayout, ...
         updateSummary();
     end
 
-function selectFiltered()
-    filteredNames = tbl.Data.safe_name;
-    for k = 1:numel(filteredNames)
-        matchIdx = strcmp(st.safe_name, filteredNames{k});
-        st.Include(matchIdx) = true;
+    function selectFiltered()
+        filteredNames = tbl.Data.safe_name;
+        for k = 1:numel(filteredNames)
+            matchIdx = strcmp(st.safe_name, filteredNames{k});
+            st.Include(matchIdx) = true;
+        end
+        tbl.Data = st(ismember(st.safe_name, filteredNames), :);
+        updateSummary();
     end
-    tbl.Data = st(ismember(st.safe_name, filteredNames), :);
-    updateSummary();
-end
 
     function clearSearch()
         searchField.Value = '';
@@ -1911,24 +2176,22 @@ end
 
     end
 
-function syncEdits(tbl, event)
-    % Get the row in the filtered table view
-    editedRow = event.Indices(1);
-    
-    % Get the corresponding row in st by matching unique ID (e.g., safe_name)
-    editedName = tbl.Data.safe_name{editedRow};
-    
-    % Find the matching row in st
-    matchIdx = strcmp(st.safe_name, editedName);
-    
-    % Update the Include value
-    st.Include(matchIdx) = tbl.Data.Include(editedRow);
-    
-    % Update summary
-    updateSummary();
-end
+    function syncEdits(tbl, event)
+        % Get the row in the filtered table view
+        editedRow = event.Indices(1);
 
+        % Get the corresponding row in st by matching unique ID (e.g., safe_name)
+        editedName = tbl.Data.safe_name{editedRow};
 
+        % Find the matching row in st
+        matchIdx = strcmp(st.safe_name, editedName);
+
+        % Update the Include value
+        st.Include(matchIdx) = tbl.Data.Include(editedRow);
+
+        % Update summary
+        updateSummary();
+    end
 
     function selectCortical(mode)
         % Find ID of Isocortex
@@ -1992,33 +2255,31 @@ end
         summaryTbl.Data = {'Total:', total, 'Selected:', selected};
     end
 
-function saveSelectionToHandles()
-    selectedStructs = st(st.Include, :);
-    handles.selectedStructs = selectedStructs;
+    function saveSelectionToHandles()
+        selectedStructs = st(st.Include, :);
+        handles.selectedStructs = selectedStructs;
 
-   
-    % Store back in main GUI figure
-    guidata(handles.fig, handles);
 
-    % Enable the button in the main GUI
-    mainHandles = guidata(handles.fig);  % Refresh
-    btn = findobj(mainHandles.fig, 'Tag', 'btnCalcABAOverlap');
-    if ~isempty(btn)
-        btn.Enable = 'on';
+        % Store back in main GUI figure
+        guidata(handles.fig, handles);
+
+        % Enable the button in the main GUI
+        mainHandles = guidata(handles.fig);  % Refresh
+        btn = findobj(mainHandles.fig, 'Tag', 'btnCalcABAOverlap');
+        if ~isempty(btn)
+            btn.Enable = 'on';
+        end
+
+        % Optional confirmation
+        uialert(f, sprintf('Saved %d selected structures for overlap calculation.%sClose this window and proceed.', height(selectedStructs), char(10)), ...
+            'Selection Saved', 'Icon', 'success');
+
     end
 
-    % Optional confirmation
-    uialert(f, sprintf('Saved %d selected structures for overlap calculation.%sClose this window and proceed.', height(selectedStructs), char(10)), ...
-        'Selection Saved', 'Icon', 'success');
-
 
 end
 
-
-end
-
-
-
+%%
 function CalcABAOverlap(handles)
 % GUI-driven function to calculate volume overlap with selected ABA structures
 handles = guidata(handles.fig);
@@ -2094,17 +2355,16 @@ for v = 1:length(volumes)
     handles.msgLabel.Text = sprintf('Calculating Overlap [%s] %d/%d Volumes', barStr, v, length(volumes));
     drawnow;
 
-
     vol = volumes(v);
-    if ~isfield(vol, 'smoothedVertices') || isempty(vol.smoothedVertices), continue; end
+    if ~isfield(vol, 'verts') || isempty(vol.verts), continue; end
 
     % Create voxel grid
-    mins = min(vol.smoothedVertices); maxs = max(vol.smoothedVertices);
+    mins = min(vol.verts); maxs = max(vol.verts);
     [X, Y, Z] = ndgrid(mins(1):resolution:maxs(1), ...
-                       mins(2):resolution:maxs(2), ...
-                       mins(3):resolution:maxs(3));
+        mins(2):resolution:maxs(2), ...
+        mins(3):resolution:maxs(3));
     grid_points = [X(:), Y(:), Z(:)];
-    inside_mask = inpolyhedron(vol.k1, vol.smoothedVertices, grid_points);
+    inside_mask = inpolyhedron(vol.k1, vol.verts, grid_points);
     vol_inside = grid_points(inside_mask, :);
     vol_volume = size(vol_inside,1) * resolution^3;
 
@@ -2130,10 +2390,14 @@ for v = 1:length(volumes)
             'overlap_volume', overlap_volume, ...
             'overlap_fraction_original', 100 * overlap_volume / vol_volume, ...
             'overlap_fraction_structure', 100 * overlap_volume / struct_volume);
-        
+
         if plotResults
             f = figure('Color', 'w'); hold on
-            patch('Vertices', vol.smoothedVertices, 'Faces', vol.k1, 'FaceAlpha', 0.2, 'FaceColor', vol.channelColor, 'EdgeColor', 'none');
+
+            patch('Vertices', vol.verts, 'Faces', vol.k1, ...
+                'FaceColor', 'red', 'FaceAlpha', alphaVal, 'EdgeColor', 'none');
+
+            % Plot brain structure (unchanged)
             patch('Vertices', structSurf.vertices, 'Faces', structSurf.faces, 'FaceColor', [0.8 0.8 0.8], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
             scatter3(overlap_points(:,1), overlap_points(:,2), overlap_points(:,3), 10, 'k', 'filled');
             legend('Volume', 'Structure', 'Overlap');
