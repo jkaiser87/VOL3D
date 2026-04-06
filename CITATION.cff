@@ -1,0 +1,25 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: VOL3D
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Julia
+    family-names: Kaiser
+    email: juk4004@med.cornell.edu
+    orcid: 'https://orcid.org/0000-0001-5142-6050'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.19409819
+repository-code: 'https://github.com/jkaiser87/VOL3D'
+url: 'https://github.com/jkaiser87/VOL3D'
+abstract: >-
+  VOL3D:  toolbox for tracking volumes from slice images and mapping them into 3D Allen CCFv3 space for analysis and visualization
+license: MIT
+commit: 9fa8dbcb83cea08dac68829322f26010cb2d2fe4
+version: v1.0.0
+date-released: '2026-04-01'
